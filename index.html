@@ -4,16 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Solar Leads Tracker</title>
+
+  <!-- Tailwind for prototyping only -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase & Charts -->
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body class="bg-gray-100 font-sans">
-  <!-- Login Form -->
+
+  <!-- Login Screen -->
   <div id="login-screen" class="flex justify-center items-center h-screen">
     <div class="bg-white p-8 rounded shadow-md w-80">
       <h2 class="text-2xl mb-4 font-bold text-center">Login</h2>
@@ -30,11 +37,11 @@
       <h1 class="text-3xl font-bold">Dashboard</h1>
       <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
     </div>
-    
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="summary-cards"></div>
 
-    <!-- Lead Capture Form -->
+    <!-- Summary Cards -->
+    <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+    <!-- Lead Form -->
     <div class="bg-white p-4 rounded shadow-md mb-6">
       <h2 class="text-xl font-semibold mb-4">Capture Lead</h2>
       <div class="grid grid-cols-2 gap-4">
@@ -44,13 +51,14 @@
         <input id="kwRequirement" type="number" placeholder="KW Requirement" class="p-2 border rounded" />
         <input id="leadBy" type="text" placeholder="Lead By (Referral, Ad, etc)" class="p-2 border rounded" />
         <select id="status" class="p-2 border rounded">
-          <option>New</option><option>Contacted</option><option>Visited</option><option>Proposal Sent</option><option>Closed</option><option>Dropped</option>
+          <option>New</option><option>Contacted</option><option>Visited</option>
+          <option>Proposal Sent</option><option>Closed</option><option>Dropped</option>
         </select>
       </div>
       <button onclick="submitLead()" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">Submit Lead</button>
     </div>
 
-    <!-- Chart Container -->
+    <!-- Charts -->
     <div class="bg-white p-4 rounded shadow-md mb-6">
       <canvas id="statusChart" class="w-full h-60"></canvas>
     </div>
@@ -59,131 +67,122 @@
     <div id="map" class="h-96 w-full rounded shadow-md"></div>
   </div>
 
-<script>
-  const firebaseConfig = {
+  <!-- JavaScript -->
+  <script>
+    const firebaseConfig = {
   apiKey: "AIzaSyDaFXEXzCXrZwuwpCxPz-5PujHi_nkazRU",
   authDomain: "hca-crm.firebaseapp.com",
   projectId: "hca-crm",
   storageBucket: "hca-crm.firebasestorage.app",
   messagingSenderId: "306976606112",
   appId: "1:306976606112:web:46fc94412fc7c1f91d46c5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+    };
 
-  // Firestore Schema
-  const LEADS_COLLECTION = "leads";
-  const USERS_COLLECTION = "users";
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-  // Login
-  function login() {
-    const email = email.value;
-    const pass = password.value;
-    auth.signInWithEmailAndPassword(email, pass)
-      .then(() => initDashboard())
-      .catch(err => alert("Login error: " + err.message));
-  }
+    const USERS_COLLECTION = "users";
+    const LEADS_COLLECTION = "leads";
 
-  // Register
-  function register() {
-    const email = email.value;
-    const pass = password.value;
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then(user => db.collection(USERS_COLLECTION).doc(user.user.uid).set({ role: "Sales Rep" }))
-      .then(() => initDashboard())
-      .catch(err => alert("Registration error: " + err.message));
-  }
+    // LOGIN
+    function login() {
+      const emailInput = document.getElementById("email").value;
+      const passwordInput = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(emailInput, passwordInput)
+        .then(() => initDashboard())
+        .catch(err => alert("Login error: " + err.message));
+    }
 
-  // Logout
-  function logout() {
-    auth.signOut().then(() => {
-      dashboard.classList.add("hidden");
-      login-screen.classList.remove("hidden");
-    });
-  }
+    // REGISTER
+    function register() {
+      const emailInput = document.getElementById("email").value;
+      const passwordInput = document.getElementById("password").value;
+      auth.createUserWithEmailAndPassword(emailInput, passwordInput)
+        .then(user => db.collection(USERS_COLLECTION).doc(user.user.uid).set({ role: "Sales Rep" }))
+        .then(() => initDashboard())
+        .catch(err => alert("Registration error: " + err.message));
+    }
 
-  // Init Dashboard
-  function initDashboard() {
-    login-screen.classList.add("hidden");
-    dashboard.classList.remove("hidden");
-    loadSummary();
-    loadChart();
-    loadMap();
-  }
-
-  // Submit Lead
-  function submitLead() {
-    navigator.geolocation.getCurrentPosition(loc => {
-      const lead = {
-        customerName: customerName.value,
-        mobileNumber: mobileNumber.value,
-        address: address.value,
-        kwRequirement: parseInt(kwRequirement.value),
-        leadBy: leadBy.value,
-        status: status.value,
-        leadOwner: auth.currentUser.uid,
-        visitDates: [new Date()],
-        location: new firebase.firestore.GeoPoint(loc.coords.latitude, loc.coords.longitude),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      db.collection(LEADS_COLLECTION).add(lead).then(() => alert("Lead Saved!"));
-    });
-  }
-
-  // Load Summary
-  function loadSummary() {
-    db.collection(LEADS_COLLECTION)
-      .where("leadOwner", "==", auth.currentUser.uid)
-      .get().then(snapshot => {
-        const total = snapshot.size;
-        const summaryEl = document.getElementById("summary-cards");
-        summaryEl.innerHTML = `
-          <div class="bg-yellow-100 p-4 rounded"><strong>Total Leads:</strong> ${total}</div>
-          <div class="bg-blue-100 p-4 rounded"><strong>Pending Proposals:</strong> ${snapshot.docs.filter(doc => doc.data().status === "Proposal Sent").length}</div>
-        `;
+    // LOGOUT
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById("dashboard").classList.add("hidden");
+        document.getElementById("login-screen").classList.remove("hidden");
       });
-  }
+    }
 
-  // Load Chart
-  function loadChart() {
-    db.collection(LEADS_COLLECTION).get().then(snapshot => {
-      const statusCounts = {};
-      snapshot.docs.forEach(doc => {
-        const status = doc.data().status;
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
-      new Chart(document.getElementById("statusChart"), {
-        type: "pie",
-        data: {
-          labels: Object.keys(statusCounts),
-          datasets: [{
-            data: Object.values(statusCounts),
-            backgroundColor: ["#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#8B5CF6", "#6B7280"]
-          }]
-        }
-      });
-    });
-  }
+    // INIT DASHBOARD
+    function initDashboard() {
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+      loadSummary();
+      loadChart();
+      loadMap();
+    }
 
-  // Load Map
-  function loadMap() {
-    const map = L.map("map").setView([20.5937, 78.9629], 5);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-    db.collection(LEADS_COLLECTION).get().then(snapshot => {
-      snapshot.docs.forEach(doc => {
-        const loc = doc.data().location;
-        L.marker([loc.latitude, loc.longitude])
-          .addTo(map)
-          .bindPopup(doc.data().customerName);
-      });
-    });
-  }
+    // SUBMIT LEAD
+    function submitLead() {
+      navigator.geolocation.getCurrentPosition(loc => {
+        const lead = {
+          customerName: document.getElementById("customerName").value,
+          mobileNumber: document.getElementById("mobileNumber").value,
+          address: document.getElementById("address").value,
+          kwRequirement: parseFloat(document.getElementById("kwRequirement").value),
+          leadBy: document.getElementById("leadBy").value,
+          status: document.getElementById("status").value,
+          leadOwner: auth.currentUser.uid,
+          visitDates: [new Date()],
+          location: new firebase.firestore.GeoPoint(loc.coords.latitude, loc.coords.longitude),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        db.collection(LEADS_COLLECTION).add(lead)
+          .then(() => alert("Lead saved!"));
+      }, () => alert("Unable to fetch location"));
+    }
 
-  // Auto-login on reload
-  auth.onAuthStateChanged(user => {
-    if (user) initDashboard();
-  });
-</script>
-</body>
-</html>
+    // LOAD SUMMARY
+    function loadSummary() {
+      db.collection(LEADS_COLLECTION)
+        .where("leadOwner", "==", auth.currentUser.uid)
+        .get()
+        .then(snapshot => {
+          const total = snapshot.size;
+          const proposals = snapshot.docs.filter(doc => doc.data().status === "Proposal Sent").length;
+          document.getElementById("summary-cards").innerHTML = `
+            <div class="bg-yellow-100 p-4 rounded"><strong>Total Leads:</strong> ${total}</div>
+            <div class="bg-blue-100 p-4 rounded"><strong>Pending Proposals:</strong> ${proposals}</div>
+          `;
+        });
+    }
+
+    // LOAD CHART
+    function loadChart() {
+      db.collection(LEADS_COLLECTION).get().then(snapshot => {
+        const counts = {};
+        snapshot.forEach(doc => {
+          const status = doc.data().status;
+          counts[status] = (counts[status] || 0) + 1;
+        });
+        new Chart(document.getElementById("statusChart"), {
+          type: "pie",
+          data: {
+            labels: Object.keys(counts),
+            datasets: [{
+              data: Object.values(counts),
+              backgroundColor: ["#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#8B5CF6", "#6B7280"]
+            }]
+          }
+        });
+      });
+    }
+
+    // LOAD MAP
+    function loadMap() {
+      const map = L.map("map").setView([20.5937, 78.9629], 5);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      db.collection(LEADS_COLLECTION).get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const loc = doc.data().location;
+          if (loc) {
+            L.marker([loc.latitude, loc.longitude])
