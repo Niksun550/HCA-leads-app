@@ -10,6 +10,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+  <style>
+    #map {
+      width: 100%;
+      height: 400px;
+      border-radius: 0.5rem;
+      margin-top: 1rem;
+    }
+  </style>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDaFXEXzCXrZwuwpCxPz-5PujHi_nkazRU",
@@ -23,6 +33,14 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+
+    let map;
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 19.0760, lng: 72.8777 }, // Mumbai default
+        zoom: 8,
+      });
+    }
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -66,7 +84,7 @@
       <canvas id="kwChart"></canvas>
     </div>
 
-    <div class="bg-white p-4 rounded shadow">
+    <div class="bg-white p-4 rounded shadow mb-6">
       <h2 class="text-xl font-semibold mb-4">Leads</h2>
       <table class="w-full table-auto text-sm">
         <thead>
@@ -82,6 +100,8 @@
         <tbody id="leadTable"></tbody>
       </table>
     </div>
+
+    <div id="map"></div>
   </div>
 
   <script>
@@ -92,15 +112,14 @@
         .then(() => {
           document.getElementById("auth-section").classList.add("hidden");
           document.getElementById("dashboard-section").classList.remove("hidden");
+          if (typeof initMap === "function") initMap();
           loadLeads();
         })
         .catch(err => alert("Login failed: " + err.message));
     }
 
     function logout() {
-      auth.signOut().then(() => {
-        location.reload();
-      });
+      auth.signOut().then(() => location.reload());
     }
 
     function addLead() {
@@ -118,7 +137,7 @@
             lat: pos.coords.latitude,
             lng: pos.coords.longitude
           },
-          createdAt: new Date() // Replaced serverTimestamp with client-side Date
+          createdAt: new Date()
         });
       }, err => alert("Location access denied: " + err.message));
     }
@@ -132,6 +151,14 @@
 
         snapshot.forEach(doc => {
           const data = doc.data();
+          if (map && data.location) {
+            new google.maps.Marker({
+              position: data.location,
+              map,
+              title: data.customerName
+            });
+          }
+
           const row = `<tr>
             <td class="p-2">${data.customerName}</td>
             <td class="p-2">${data.mobile}</td>
