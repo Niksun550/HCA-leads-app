@@ -52,13 +52,8 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      if (userCredential.user) {
-        document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
-        await auth.authStateReady();
-        router.replace("/dashboard");
-        return;
-      }
-      throw new Error("Login failed: No user credential found.");
+      document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
+      router.replace("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
