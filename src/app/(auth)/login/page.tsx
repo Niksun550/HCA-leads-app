@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -54,6 +55,8 @@ export default function LoginPage() {
       if (userCredential.user) {
         // Set cookie to trigger middleware
         document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
+        // Wait for auth persistence to be settled before redirecting
+        await auth.authStateReady();
         router.replace("/dashboard");
       }
     } catch (error: any) {
@@ -62,9 +65,9 @@ export default function LoginPage() {
         title: "Login Failed",
         description: error.message || "An unexpected error occurred.",
       });
-    } finally {
-      setIsLoading(false);
-    }
+       setIsLoading(false);
+    } 
+    // Do not set isLoading to false here on success, as the page will redirect
   }
 
   return (
