@@ -1,4 +1,5 @@
 import { Sun } from 'lucide-react';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,6 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <h1 className="text-2xl font-bold font-headline text-foreground">SolarLeads</h1>
       </div>
       {children}
+      <Toaster />
     </main>
   );
 }
