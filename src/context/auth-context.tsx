@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useEffect, useState, ReactNode } from "react";
@@ -21,20 +22,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setUser({
+        // Assume a temporary user object exists while we fetch from Firestore
+        const tempUser: AppUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            displayName: firebaseUser.displayName || userData.displayName,
-            role: userData.role || 'Viewer',
-          });
-        } else {
-           // Handle case where user exists in Auth but not Firestore
-           // Maybe redirect to a profile completion page or sign out
-           setUser(null);
+            displayName: firebaseUser.displayName,
+            role: 'Viewer', // Default role
+        };
+        setUser(tempUser);
+
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || userData.displayName,
+                role: userData.role || 'Viewer',
+              });
+            } else {
+               // User exists in Auth but not Firestore. They might be in the process of registering.
+               // We can keep the temporary user object or sign them out if this state is invalid.
+               // For now, we'll keep them logged in with the temp object.
+               console.warn("User document not found in Firestore for UID:", firebaseUser.uid);
+            }
+        } catch (error) {
+            console.error("Error fetching user document:", error);
+            // If fetching fails due to permissions etc., sign out to prevent broken states.
+            setUser(null);
         }
       } else {
         setUser(null);
