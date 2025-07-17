@@ -10,15 +10,18 @@ import { LoaderCircle } from "lucide-react";
 
 interface AuthContextType {
   user: AppUser | null;
-  loading: boolean;
+  loading: boolean; // Kept for legacy compatibility if needed, but isInitialized is preferred.
   isInitialized: boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  isInitialized: false,
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -38,35 +41,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
           } else {
             // This case might happen for a brief moment or if user doc creation failed
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              role: 'Viewer', // Default role
-            });
+             await signOut(auth); // Log out if user doc doesn't exist
+             setUser(null);
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
-          // Still set a basic user object to avoid being logged out
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            role: 'Viewer',
-          });
+           await signOut(auth); // Log out on error
+           setUser(null);
         }
       } else {
         setUser(null);
       }
-      setLoading(false);
-      setIsInitialized(true);
+      // Defer setting initialized to ensure state propagation.
+      setTimeout(() => setIsInitialized(true), 0);
     });
 
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, isInitialized }}>
+    <AuthContext.Provider value={{ user, loading: !isInitialized, isInitialized }}>
       {isInitialized ? children : (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
