@@ -50,10 +50,12 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Set cookie to trigger middleware
-      document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
-      router.push("/dashboard");
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      if (userCredential.user) {
+        // Set cookie to trigger middleware
+        document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
+        router.replace("/dashboard");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",

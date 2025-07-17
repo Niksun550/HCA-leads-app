@@ -3,7 +3,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 import { LoaderCircle } from "lucide-react";
@@ -20,46 +20,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Assume a temporary user object exists while we fetch from Firestore
-        const tempUser: AppUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            role: 'Viewer', // Default role
-        };
-        setUser(tempUser);
-
         const userDocRef = doc(db, "users", firebaseUser.uid);
-        try {
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setUser({
+        const unsubscribeFirestore = onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || userData.displayName,
+              role: userData.role || 'Viewer',
+            });
+          } else {
+            // This case might happen during registration before firestore doc is created.
+            // We'll set a temporary user object.
+             setUser({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                displayName: firebaseUser.displayName || userData.displayName,
-                role: userData.role || 'Viewer',
-              });
-            } else {
-               // User exists in Auth but not Firestore. They might be in the process of registering.
-               // We can keep the temporary user object or sign them out if this state is invalid.
-               // For now, we'll keep them logged in with the temp object.
-               console.warn("User document not found in Firestore for UID:", firebaseUser.uid);
-            }
-        } catch (error) {
+                displayName: firebaseUser.displayName,
+                role: 'Viewer',
+            });
+          }
+          setLoading(false);
+        }, (error) => {
             console.error("Error fetching user document:", error);
-            // If fetching fails due to permissions etc., sign out to prevent broken states.
             setUser(null);
-        }
+            setLoading(false);
+        });
+
+        return () => unsubscribeFirestore();
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   if (loading) {

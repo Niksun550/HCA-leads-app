@@ -7,23 +7,20 @@ export function middleware(request: NextRequest) {
 
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
   
-  // If user is not authenticated and tries to access a protected page (but not the root)
-  if (!hasToken && !isAuthPage && pathname !== '/') {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // If user is authenticated and tries to access an auth page
-  if (hasToken && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // The root path '/' is now handled by the client-side component in src/app/page.tsx
-  // to avoid middleware/client-side race conditions during auth check.
+  // Let the client-side handle the root path redirection
   if (pathname === '/') {
-    // Let the page component handle the redirect.
     return NextResponse.next();
   }
 
+  // If user is not authenticated, redirect to login page.
+  if (!hasToken && !isAuthPage) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // If user is authenticated and tries to access an auth page, redirect to dashboard.
+  if (hasToken && isAuthPage) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
 
   return NextResponse.next()
 }
