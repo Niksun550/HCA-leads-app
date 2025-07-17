@@ -41,6 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, LoaderCircle, LocateFixed, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface LeadFormProps {
   isOpen: boolean;
@@ -271,7 +272,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 </Popover>
                 <div className="flex flex-wrap gap-2 mt-2">
                     {field.value.map((date, i) => (
-                        <Badge key={i} variant="secondary" className="flex items-center gap-1">
+                        <Badge key={i} className="flex items-center gap-1">
                             {format(date, 'PPP')}
                             <button type="button" onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
                                 <X className="h-3 w-3"/>
