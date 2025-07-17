@@ -11,7 +11,7 @@ import { LoaderCircle } from "lucide-react";
 interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
-  isInitialized: boolean; // New state to track if initial auth check is complete
+  isInitialized: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,12 +22,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setLoading(true);
       if (firebaseUser) {
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
-          
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setUser({
@@ -37,8 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role || 'Viewer',
             });
           } else {
-            // This might happen during registration before the doc is created
-            // Or if there's an issue fetching. We default to a safe role.
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -48,38 +47,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
-          // Fallback to basic user info if Firestore is inaccessible to prevent logout loops
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: firebaseUser.displayName,
             role: 'Viewer',
           });
-        } finally {
-          setLoading(false);
-          setIsInitialized(true);
         }
       } else {
         setUser(null);
-        setLoading(false);
-        setIsInitialized(true);
       }
+      setLoading(false);
+      setIsInitialized(true);
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
-
-  if (!isInitialized) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider value={{ user, loading, isInitialized }}>
-      {children}
+      {!isInitialized ? (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

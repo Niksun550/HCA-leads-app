@@ -51,16 +51,17 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
       router.replace("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: "Invalid email or password. Please try again.",
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -80,7 +81,7 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="name@example.com" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -93,7 +94,7 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
+                    <Input type="password" placeholder="********" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
