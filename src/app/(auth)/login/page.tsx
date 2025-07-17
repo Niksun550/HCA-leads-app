@@ -60,7 +60,8 @@ export default function LoginPage() {
         title: "Login Failed",
         description: "Invalid email or password. Please try again.",
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   }
 
