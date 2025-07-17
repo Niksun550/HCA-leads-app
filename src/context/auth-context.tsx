@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useEffect, useState, ReactNode } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { AppUser } from "@/types";
@@ -10,7 +10,7 @@ import { LoaderCircle } from "lucide-react";
 
 interface AuthContextType {
   user: AppUser | null;
-  loading: boolean; // Kept for legacy compatibility if needed, but isInitialized is preferred.
+  loading: boolean;
   isInitialized: boolean;
 }
 
@@ -25,39 +25,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        try {
-          const userDocRef = doc(db, "users", firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
+        // Add a small delay to allow Firebase auth state to propagate to Firestore rules
+        setTimeout(async () => {
+          try {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
 
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName || userData.displayName,
-              role: userData.role || 'Viewer',
-            });
-          } else {
-            // This case might happen for a brief moment or if user doc creation failed
-             await signOut(auth); // Log out if user doc doesn't exist
-             setUser(null);
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || userData.displayName,
+                role: userData.role || 'Viewer',
+              });
+            } else {
+              // This case might happen if user doc creation failed
+              await signOut(auth); // Log out if user doc doesn't exist
+              setUser(null);
+            }
+          } catch (error) {
+            console.error("Error fetching user document:", error);
+            await signOut(auth); // Log out on error
+            setUser(null);
+          } finally {
+             if (!isInitialized) setIsInitialized(true);
           }
-        } catch (error) {
-          console.error("Error fetching user document:", error);
-           await signOut(auth); // Log out on error
-           setUser(null);
-        }
+        }, 500); // 500ms delay
       } else {
         setUser(null);
+        if (!isInitialized) setIsInitialized(true);
       }
-      // Defer setting initialized to ensure state propagation.
-      setTimeout(() => setIsInitialized(true), 0);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isInitialized]);
 
   return (
     <AuthContext.Provider value={{ user, loading: !isInitialized, isInitialized }}>

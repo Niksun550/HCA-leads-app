@@ -55,6 +55,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       );
   }
 
+  if (!user) {
+    // This case should ideally be handled by middleware, but as a fallback
+    router.replace('/login');
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
       <SidebarProvider>
       <Sidebar>

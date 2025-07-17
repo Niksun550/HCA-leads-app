@@ -40,32 +40,35 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isInitialized || !user) {
-      // Wait for auth to be initialized
+      // Wait for auth context to be initialized and user to be available
       return;
     }
 
     setLoading(true);
 
     const fetchUsersAndLeads = async () => {
-      let usersData: AppUser[] = [user]; // Default to current user
+      // Set the current user immediately. For Admins, fetch others.
+      setAllUsers([user]);
+
       if (user.role === 'Admin') {
         try {
           const usersCollection = collection(db, 'users');
           const usersSnapshot = await getDocs(usersCollection);
-          usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+          const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
           setAllUsers(usersData);
         } catch (error) {
           console.error("Error fetching users:", error);
-          setAllUsers([user]); // Fallback to current user
+          // Fallback to only the current user if fetching fails
+          setAllUsers([user]);
         }
-      } else {
-        setAllUsers([user]);
       }
 
+      // Determine the query based on the user's role
       const leadsQuery = user.role === 'Admin'
         ? query(collection(db, 'leads'))
         : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
 
+      // Subscribe to lead updates
       const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
         const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
         setLeads(leadsData);
@@ -75,15 +78,20 @@ export default function DashboardPage() {
         setLoading(false);
       });
 
-      return () => {
-        unsubscribeLeads();
-      };
+      // Return the cleanup function for the subscription
+      return unsubscribeLeads;
     };
 
-    const unsubscribe = fetchUsersAndLeads();
+    let unsubscribe: (() => void) | undefined;
+    fetchUsersAndLeads().then(unsub => {
+        unsubscribe = unsub;
+    });
 
+    // Cleanup subscription on component unmount
     return () => {
-      unsubscribe.then(unsub => unsub && unsub());
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
 
   }, [user, isInitialized]);
@@ -115,9 +123,13 @@ export default function DashboardPage() {
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
         </div>
-        <div className="grid gap-8 md:grid-cols-2">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+           <div className="md:col-span-3">
+             <Skeleton className="h-80" />
+           </div>
+           <div className="md:col-span-2">
+             <Skeleton className="h-80" />
+           </div>
         </div>
         <Skeleton className="h-96" />
       </div>
