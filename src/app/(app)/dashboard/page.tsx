@@ -25,7 +25,7 @@ import {
 import { leadStatuses } from '@/types';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +39,9 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
+    if (!isInitialized || !user) {
+        setLoading(!isInitialized);
+        return;
     }
 
     setLoading(true);
@@ -80,7 +80,7 @@ export default function DashboardPage() {
     return () => {
         unsubscribeLeads();
     };
-  }, [user]);
+  }, [user, isInitialized]);
 
   const handleAddLead = () => {
     setSelectedLead(null);
