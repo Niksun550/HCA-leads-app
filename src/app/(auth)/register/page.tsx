@@ -74,8 +74,6 @@ export default function RegisterPage() {
         role: values.role,
       });
 
-      // Set cookie to trigger middleware
-      document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -83,7 +81,6 @@ export default function RegisterPage() {
         title: "Registration Failed",
         description: error.message || "An unexpected error occurred.",
       });
-    } finally {
       setIsLoading(false);
     }
   }

@@ -52,7 +52,6 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
       router.replace("/dashboard");
     } catch (error: any) {
       toast({

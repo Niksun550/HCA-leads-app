@@ -28,7 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LayoutDashboard, LogOut, Sun, ChevronDown } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { LoaderCircle } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -37,8 +36,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await signOut(auth);
-    // Remove cookie to trigger middleware
-    document.cookie = 'firebase-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     router.push("/login");
   };
 
@@ -56,7 +53,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    // This case should ideally be handled by middleware, but as a fallback
     router.replace('/login');
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">

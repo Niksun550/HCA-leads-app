@@ -1,27 +1,18 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { auth } from './lib/firebase';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const hasToken = request.cookies.has('firebase-auth-token')
-
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
-  
-  // Let the client-side handle the root path redirection
+
+  // The / page is handled by client-side logic in page.tsx now
   if (pathname === '/') {
     return NextResponse.next();
   }
-
-  // If user is not authenticated, redirect to login page.
-  if (!hasToken && !isAuthPage) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // If user is authenticated and tries to access an auth page, redirect to dashboard.
-  if (hasToken && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
+  
+  // Client-side auth context now handles redirecting unauthenticated users from protected pages
+  // and authenticated users from auth pages. Middleware can be simplified.
   return NextResponse.next()
 }
 
