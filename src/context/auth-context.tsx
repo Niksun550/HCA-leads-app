@@ -23,7 +23,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      setLoading(true);
       if (firebaseUser) {
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -38,15 +37,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role || 'Viewer',
             });
           } else {
+            // This case might happen for a brief moment or if user doc creation failed
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
-              role: 'Viewer',
+              role: 'Viewer', // Default role
             });
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
+          // Still set a basic user object to avoid being logged out
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -66,12 +67,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading, isInitialized }}>
-      {!isInitialized ? (
+      {isInitialized ? children : (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
         </div>
-      ) : (
-        children
       )}
     </AuthContext.Provider>
   );

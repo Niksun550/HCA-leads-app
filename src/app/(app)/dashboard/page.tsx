@@ -46,26 +46,22 @@ export default function DashboardPage() {
 
     setLoading(true);
 
-    // Fetch users first
-    const fetchUsers = async () => {
+    const fetchUsersAndLeads = async () => {
+      let usersData: AppUser[] = [user]; // Default to current user
       if (user.role === 'Admin') {
         try {
           const usersCollection = collection(db, 'users');
           const usersSnapshot = await getDocs(usersCollection);
-          const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+          usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
           setAllUsers(usersData);
         } catch (error) {
           console.error("Error fetching users:", error);
           setAllUsers([user]); // Fallback to current user
         }
       } else {
-        // Non-admins can only see/assign to themselves
         setAllUsers([user]);
       }
-    };
 
-    fetchUsers().then(() => {
-      // Now set up leads listener
       const leadsQuery = user.role === 'Admin'
         ? query(collection(db, 'leads'))
         : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
@@ -82,7 +78,13 @@ export default function DashboardPage() {
       return () => {
         unsubscribeLeads();
       };
-    });
+    };
+
+    const unsubscribe = fetchUsersAndLeads();
+
+    return () => {
+      unsubscribe.then(unsub => unsub && unsub());
+    };
 
   }, [user, isInitialized]);
 
