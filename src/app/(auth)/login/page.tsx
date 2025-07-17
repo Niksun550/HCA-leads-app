@@ -53,25 +53,19 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       if (userCredential.user) {
-        // Set cookie to trigger middleware
         document.cookie = `firebase-auth-token=true; path=/; max-age=${60 * 60 * 24 * 7}`;
-        // Wait for auth persistence to be settled before redirecting
         await auth.authStateReady();
         router.replace("/dashboard");
-        // Don't set isLoading to false on success because we are redirecting
         return;
       }
+      throw new Error("Login failed: No user credential found.");
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
         description: error.message || "An unexpected error occurred.",
       });
-    } finally {
-      // Ensure the loading state is always reset unless a redirect is happening
-      if (router.asPath === '/login') {
-         setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }
 
