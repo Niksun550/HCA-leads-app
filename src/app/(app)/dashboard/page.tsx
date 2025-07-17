@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter } from 'lucide-react';
+import { PlusCircle, ListFilter, MapPin } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
@@ -39,8 +39,12 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     const leadsQuery = user.role === 'Admin'
       ? query(collection(db, 'leads'))
       : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
@@ -53,25 +57,23 @@ export default function DashboardPage() {
       console.error("Error fetching leads:", error);
       setLoading(false);
     });
-    
-    // Fetch users for the owner filter.
+
     const fetchUsers = async () => {
-        if(user.role === 'Admin') {
+        if (user.role === 'Admin') {
             try {
-                const usersQuery = query(collection(db, 'users'), where('role', 'in', ['Admin', 'Sales Rep']));
-                const snapshot = await getDocs(usersQuery);
-                const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
+                const usersCollection = collection(db, 'users');
+                const usersSnapshot = await getDocs(usersCollection);
+                const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
                 setAllUsers(usersData);
             } catch (error) {
                 console.error("Error fetching users:", error);
-                // Fallback for safety, even for Admins
-                setAllUsers([user]);
+                setAllUsers([user]); // Fallback to current user
             }
         } else {
-            // Non-admins can only see themselves
+            // Non-admins can only see/assign to themselves
             setAllUsers([user]);
         }
-    }
+    };
     
     fetchUsers();
 
