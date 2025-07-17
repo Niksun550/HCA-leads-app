@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, MapPin } from 'lucide-react';
+import { PlusCircle, ListFilter } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
@@ -40,46 +40,50 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isInitialized || !user) {
-        setLoading(!isInitialized);
-        return;
+      // Wait for auth to be initialized
+      return;
     }
 
     setLoading(true);
-    const leadsQuery = user.role === 'Admin'
-      ? query(collection(db, 'leads'))
-      : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
 
-    const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
-      const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
-      setLeads(leadsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching leads:", error);
-      setLoading(false);
+    // Fetch users first
+    const fetchUsers = async () => {
+      if (user.role === 'Admin') {
+        try {
+          const usersCollection = collection(db, 'users');
+          const usersSnapshot = await getDocs(usersCollection);
+          const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+          setAllUsers(usersData);
+        } catch (error) {
+          console.error("Error fetching users:", error);
+          setAllUsers([user]); // Fallback to current user
+        }
+      } else {
+        // Non-admins can only see/assign to themselves
+        setAllUsers([user]);
+      }
+    };
+
+    fetchUsers().then(() => {
+      // Now set up leads listener
+      const leadsQuery = user.role === 'Admin'
+        ? query(collection(db, 'leads'))
+        : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+
+      const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+        const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+        setLeads(leadsData);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching leads:", error);
+        setLoading(false);
+      });
+
+      return () => {
+        unsubscribeLeads();
+      };
     });
 
-    const fetchUsers = async () => {
-        if (user.role === 'Admin') {
-            try {
-                const usersCollection = collection(db, 'users');
-                const usersSnapshot = await getDocs(usersCollection);
-                const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
-                setAllUsers(usersData);
-            } catch (error) {
-                console.error("Error fetching users:", error);
-                setAllUsers([user]); // Fallback to current user
-            }
-        } else {
-            // Non-admins can only see/assign to themselves
-            setAllUsers([user]);
-        }
-    };
-    
-    fetchUsers();
-
-    return () => {
-        unsubscribeLeads();
-    };
   }, [user, isInitialized]);
 
   const handleAddLead = () => {
@@ -96,7 +100,7 @@ export default function DashboardPage() {
     return leads.filter(lead => statusFilters[lead.status]);
   }, [leads, statusFilters]);
 
-  if (loading) {
+  if (!isInitialized || loading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-8">
         <div className="flex items-center justify-between">
