@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -40,8 +41,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    let unsubscribeUsers: () => void = () => {};
-
     const leadsQuery = user.role === 'Admin'
       ? query(collection(db, 'leads'))
       : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
@@ -55,13 +54,22 @@ export default function DashboardPage() {
       setLoading(false);
     });
     
-    // Fetch all users for the owner filter (if admin)
+    // Fetch users for the owner filter.
     const fetchUsers = async () => {
         if(user.role === 'Admin') {
-            const usersQuery = query(collection(db, 'users'), where('role', 'in', ['Admin', 'Sales Rep']));
-            const snapshot = await getDocs(usersQuery);
-            const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
-            setAllUsers(usersData);
+            try {
+                const usersQuery = query(collection(db, 'users'), where('role', 'in', ['Admin', 'Sales Rep']));
+                const snapshot = await getDocs(usersQuery);
+                const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
+                setAllUsers(usersData);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+                // Fallback for safety, even for Admins
+                setAllUsers([user]);
+            }
+        } else {
+            // Non-admins can only see themselves
+            setAllUsers([user]);
         }
     }
     
@@ -69,7 +77,6 @@ export default function DashboardPage() {
 
     return () => {
         unsubscribeLeads();
-        unsubscribeUsers();
     };
   }, [user]);
 
