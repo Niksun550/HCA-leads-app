@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, MapPin } from "lucide-react";
 import type { Lead } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
@@ -69,6 +70,11 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
     }
   };
 
+  const handleViewOnMap = (address: string) => {
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    window.open(googleMapsUrl, '_blank');
+  };
+
   return (
     <div className="rounded-lg border shadow-sm bg-card">
       <Table>
@@ -109,6 +115,9 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onEdit(lead)}>
                             <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleViewOnMap(lead.address)}>
+                            <MapPin className="mr-2 h-4 w-4" /> View on Map
                           </DropdownMenuItem>
                           {user?.role === 'Admin' && (
                             <AlertDialogTrigger asChild>
