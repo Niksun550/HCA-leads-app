@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
@@ -40,6 +40,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
+    let unsubscribeUsers: () => void = () => {};
+
     const leadsQuery = user.role === 'Admin'
       ? query(collection(db, 'leads'))
       : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
@@ -54,19 +56,21 @@ export default function DashboardPage() {
     });
     
     // Fetch all users for the owner filter (if admin)
-    if(user.role === 'Admin') {
-      const usersQuery = query(collection(db, 'users'), where('role', 'in', ['Admin', 'Sales Rep']));
-      const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-        const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
-        setAllUsers(usersData);
-      });
-      return () => {
+    const fetchUsers = async () => {
+        if(user.role === 'Admin') {
+            const usersQuery = query(collection(db, 'users'), where('role', 'in', ['Admin', 'Sales Rep']));
+            const snapshot = await getDocs(usersQuery);
+            const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
+            setAllUsers(usersData);
+        }
+    }
+    
+    fetchUsers();
+
+    return () => {
         unsubscribeLeads();
         unsubscribeUsers();
-      };
-    }
-
-    return () => unsubscribeLeads();
+    };
   }, [user]);
 
   const handleAddLead = () => {
