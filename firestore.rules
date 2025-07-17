@@ -1,36 +1,42 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if a user has a specific role
-    function hasRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+
+    // Helper function to get the user's role from their user document.
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow user creation on signup
+      // Any authenticated user can read user documents. This is needed for the app to function correctly.
+      allow read: if request.auth != null;
+      // Users can create their own document when signing up.
       allow create: if request.auth.uid == userId;
-      // Allow users to read/update their own data
-      // Allow Admins to read any user's data
-      allow read, update: if request.auth.uid == userId || hasRole('Admin');
-      // Admins can list all users
-      allow list: if hasRole('Admin');
+      // Users can only update their own document.
+      allow update: if request.auth.uid == userId;
+      // Only Admins can delete users.
+      allow delete: if getUserRole(request.auth.uid) == 'Admin';
     }
 
+    // Rules for the 'leads' collection
     match /leads/{leadId} {
-      allow read, write: if hasRole('Admin');
+      // Admins can perform any action.
+      // Sales Reps and Viewers can read leads assigned to them.
+      allow read: if getUserRole(request.auth.uid) == 'Admin' 
+                  || (request.auth.uid == resource.data.ownerId && (getUserRole(request.auth.uid) == 'Sales Rep' || getUserRole(request.auth.uid) == 'Viewer'));
       
-      // Sales Reps can create new leads
-      allow create: if hasRole('Sales Rep');
-      
-      // Sales Reps can read, update, delete their own leads
-      allow read, update, delete: if hasRole('Sales Rep') && resource.data.ownerId == request.auth.uid;
-      
-      // Viewers can only read their assigned leads
-      allow read: if hasRole('Viewer') && resource.data.ownerId == request.auth.uid;
-      
-      // Any authenticated user can list leads, but the query must be filtered by ownerId
-      allow list: if request.auth != null;
+      // Admins and Sales Reps can create leads.
+      allow create: if getUserRole(request.auth.uid) == 'Admin' || getUserRole(request.auth.uid) == 'Sales Rep';
+
+      // Admins can update any lead.
+      // Sales Reps can update leads assigned to them.
+      allow update: if getUserRole(request.auth.uid) == 'Admin' || (request.auth.uid == resource.data.ownerId && getUserRole(request.auth.uid) == 'Sales Rep');
+
+      // Only Admins can delete leads.
+      allow delete: if getUserRole(request.auth.uid) == 'Admin';
     }
   }
 }
