@@ -58,6 +58,8 @@ export default function LoginPage() {
         // Wait for auth persistence to be settled before redirecting
         await auth.authStateReady();
         router.replace("/dashboard");
+        // Don't set isLoading to false on success because we are redirecting
+        return;
       }
     } catch (error: any) {
       toast({
@@ -65,9 +67,12 @@ export default function LoginPage() {
         title: "Login Failed",
         description: error.message || "An unexpected error occurred.",
       });
-       setIsLoading(false);
-    } 
-    // Do not set isLoading to false here on success, as the page will redirect
+    } finally {
+      // Ensure the loading state is always reset unless a redirect is happening
+      if (router.asPath === '/login') {
+         setIsLoading(false);
+      }
+    }
   }
 
   return (
