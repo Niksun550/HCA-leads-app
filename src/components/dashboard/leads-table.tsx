@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Trash2, Edit, MapPin } from "lucide-react";
-import type { Lead } from "@/types";
+import type { Lead, Remark } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -50,6 +50,14 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
   Dropped: "destructive",
 };
 
+const getLatestRemark = (lead: Lead): Remark | null => {
+  if (!lead.remarks || lead.remarks.length === 0) {
+    return null;
+  }
+  // Remarks are sorted by date when added, so the last one is the latest.
+  return lead.remarks[lead.remarks.length - 1];
+};
+
 
 export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { user } = useAuth();
@@ -74,14 +82,6 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const handleViewOnMap = (address: string) => {
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     window.open(googleMapsUrl, '_blank');
-  };
-
-  const getLatestRemark = (lead: Lead) => {
-    if (!lead.remarks || lead.remarks.length === 0) {
-      return null;
-    }
-    // Remarks are sorted by date when added, so the last one is the latest.
-    return lead.remarks[lead.remarks.length - 1];
   };
 
   return (
