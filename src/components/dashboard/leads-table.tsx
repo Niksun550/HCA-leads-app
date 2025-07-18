@@ -82,7 +82,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
     }
     // Remarks are sorted by date when added, so the last one is the latest.
     return lead.remarks[lead.remarks.length - 1];
-  }
+  };
 
   return (
     <div className="rounded-lg border shadow-sm bg-card">
