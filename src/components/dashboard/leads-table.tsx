@@ -138,7 +138,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={5} className="h-24 text-center">
                 No leads found.
               </TableCell>
             </TableRow>
