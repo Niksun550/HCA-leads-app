@@ -40,16 +40,6 @@ interface LeadsTableProps {
   onEdit: (lead: Lead) => void;
 }
 
-const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-  New: "default",
-  Contacted: "secondary",
-  Visited: "outline",
-  'Proposal Sent': "default",
-  'Structure Pending': "outline",
-  Closed: "default",
-  Dropped: "destructive",
-};
-
 export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -75,6 +65,24 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
     window.open(googleMapsUrl, '_blank');
   };
 
+  const getStatusVariant = (status: Lead['status']): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case 'New':
+      case 'Proposal Sent':
+      case 'Closed':
+        return 'default';
+      case 'Contacted':
+        return 'secondary';
+      case 'Visited':
+      case 'Structure Pending':
+        return 'outline';
+      case 'Dropped':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
   return (
     <div className="rounded-lg border shadow-sm bg-card">
       <Table>
@@ -92,7 +100,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
           {leads.length > 0 ? (
             leads.map((lead) => {
               const latestRemark = (lead.remarks && lead.remarks.length > 0)
-                ? lead.remarks[lead.remarks.length - 1]
+                ? lead.remarks.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())[0]
                 : null;
               
               return (
@@ -105,7 +113,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{lead.ownerName}</TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant[lead.status] || "secondary"}>{lead.status}</Badge>
+                    <Badge variant={getStatusVariant(lead.status)}>{lead.status}</Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">{lead.kwRequirement} KW</TableCell>
                   <TableCell className="hidden lg:table-cell">{lead.propertyType}</TableCell>
