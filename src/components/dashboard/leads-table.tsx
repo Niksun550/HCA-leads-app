@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Trash2, Edit, MapPin } from "lucide-react";
-import type { Lead, Remark } from "@/types";
+import type { Lead } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -49,15 +49,6 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
   Closed: "default",
   Dropped: "destructive",
 };
-
-const getLatestRemark = (lead: Lead): Remark | null => {
-  if (!lead.remarks || lead.remarks.length === 0) {
-    return null;
-  }
-  // Remarks are sorted by date when added, so the last one is the latest.
-  return lead.remarks[lead.remarks.length - 1];
-};
-
 
 export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { user } = useAuth();
@@ -100,12 +91,17 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
         <TableBody>
           {leads.length > 0 ? (
             leads.map((lead) => {
-              const latestRemark = getLatestRemark(lead);
+              const latestRemark = (lead.remarks && lead.remarks.length > 0)
+                ? lead.remarks[lead.remarks.length - 1]
+                : null;
+              
               return (
                 <TableRow key={lead.id}>
                   <TableCell>
                     <div className="font-medium">{lead.customerName}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-[200px]">{latestRemark?.text || lead.mobileNumber}</div>
+                    <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      {latestRemark?.text || lead.mobileNumber}
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{lead.ownerName}</TableCell>
                   <TableCell>
