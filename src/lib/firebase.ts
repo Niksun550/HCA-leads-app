@@ -27,14 +27,7 @@ You may need to restart the Next.js development server after updating the file.`
     );
 }
 
-const getFirebaseApp = () => {
-    if (getApps().length === 0) {
-        return initializeApp(firebaseConfig);
-    }
-    return getApp();
-};
-
-const app = getFirebaseApp();
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
