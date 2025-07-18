@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, where, getDocs, or } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isInitialized || !user) {
-      return;
+        if(isInitialized) setLoading(false);
+        return;
+    }
+    
+    const { db } = getFirebaseServices();
+    if (!db) {
+        setLoading(false);
+        return;
     }
 
     setLoading(true);

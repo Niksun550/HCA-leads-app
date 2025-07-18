@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, UserRole } from '@/types';
 import { userRoles } from '@/types';
@@ -38,6 +38,13 @@ export default function SettingsPage() {
   const [isAddUserFormOpen, setIsAddUserFormOpen] = useState(false);
 
   const fetchUsers = async () => {
+    const { db } = getFirebaseServices();
+    if (!db) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
+        setLoading(false);
+        return;
+    }
+
     try {
       const usersCollection = collection(db, 'users');
       const usersSnapshot = await getDocs(usersCollection);
@@ -64,9 +71,15 @@ export default function SettingsPage() {
     }
     
     fetchUsers();
-  }, [isInitialized, user, router, toast]);
+  }, [isInitialized, user, router]);
 
   const handleRoleChange = async (uid: string, newRole: UserRole) => {
+    const { db } = getFirebaseServices();
+    if (!db) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
+        return;
+    }
+
     try {
       const userDocRef = doc(db, 'users', uid);
       await updateDoc(userDocRef, { role: newRole });
@@ -88,7 +101,6 @@ export default function SettingsPage() {
   };
 
   const handleUserAdded = () => {
-    // Re-fetch users to include the new one
     fetchUsers();
   };
 

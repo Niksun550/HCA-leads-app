@@ -21,7 +21,7 @@ import { MoreHorizontal, Trash2, Edit, MapPin } from "lucide-react";
 import type { Lead } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -45,6 +45,12 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { toast } = useToast();
 
   const handleDelete = async (leadId: string) => {
+    const { db } = getFirebaseServices();
+    if (!db) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
+        return;
+    }
+
     try {
       await deleteDoc(doc(db, "leads", leadId));
       toast({

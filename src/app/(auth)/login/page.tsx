@@ -8,7 +8,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -38,6 +41,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { isFirebaseConfigured } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -50,9 +54,19 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    const { auth } = getFirebaseServices();
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase is not configured. Please contact the administrator.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Explicitly redirect on successful login
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -62,7 +76,6 @@ export default function LoginPage() {
       });
       setIsLoading(false);
     }
-    // No finally block needed. If successful, the router push will navigate away.
   }
 
   return (
@@ -72,6 +85,15 @@ export default function LoginPage() {
         <CardDescription>Enter your credentials to access your account.</CardDescription>
       </CardHeader>
       <CardContent>
+        {!isFirebaseConfigured && (
+            <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Configuration Error</AlertTitle>
+                <AlertDescription>
+                   Firebase is not configured. Please add your credentials to a <strong>.env.local</strong> file to enable login.
+                </AlertDescription>
+            </Alert>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -81,7 +103,7 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} disabled={isLoading} />
+                    <Input placeholder="name@example.com" {...field} disabled={isLoading || !isFirebaseConfigured} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -94,13 +116,13 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="********" {...field} disabled={isLoading} />
+                    <Input type="password" placeholder="********" {...field} disabled={isLoading || !isFirebaseConfigured} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !isFirebaseConfigured}>
               {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
@@ -108,7 +130,7 @@ export default function LoginPage() {
         </Form>
         <div className="mt-6 text-center text-sm">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="underline text-primary">
+          <Link href="/register" className={!isFirebaseConfigured ? "pointer-events-none text-muted-foreground" : "underline text-primary"}>
             Sign up
           </Link>
         </div>

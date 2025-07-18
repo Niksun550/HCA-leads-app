@@ -4,24 +4,35 @@
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 
 interface AuthContextType {
   user: AppUser | null;
   isInitialized: boolean;
+  isFirebaseConfigured: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isInitialized: false,
+  isFirebaseConfigured: false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
 
   useEffect(() => {
+    const { auth, db, isConfigured } = getFirebaseServices();
+    setIsFirebaseConfigured(isConfigured);
+
+    if (!isConfigured || !auth) {
+      setIsInitialized(true);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
@@ -37,8 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role || 'Viewer', // Default to 'Viewer' if role not set
             });
           } else {
-            // This can happen if the user document wasn't created during registration
-            // Or if Firestore rules prevent access temporarily
             console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);
              setUser({
               uid: firebaseUser.uid,
@@ -49,7 +58,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
-          // If we can't get the user doc, something is wrong. Log them out.
           setUser(null);
         }
       } else {
@@ -62,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isInitialized }}>
+    <AuthContext.Provider value={{ user, isInitialized, isFirebaseConfigured }}>
       {children}
     </AuthContext.Provider>
   );

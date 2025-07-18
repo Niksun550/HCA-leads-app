@@ -1,8 +1,8 @@
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getFunctions, type Functions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,43 +13,42 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app;
-let auth;
-let db;
-let functions;
-
-// This function ensures that Firebase is initialized only once.
-function initializeFirebase() {
-  if (!getApps().length) {
-    // Check if all required environment variables are present
-    if (
-      !firebaseConfig.apiKey ||
-      !firebaseConfig.authDomain ||
-      !firebaseConfig.projectId
-    ) {
-      console.error("Firebase configuration is missing or incomplete. Please check your .env.local file.");
-      // In a real app, you might want to throw an error or handle this differently.
-      // For this context, we will prevent initialization.
-      return { app: null, auth: null, db: null, functions: null };
-    }
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApp();
-  }
-
-  auth = getAuth(app);
-  db = getFirestore(app);
-  functions = getFunctions(app);
-
-  return { app, auth, db, functions };
+interface FirebaseServices {
+    app: FirebaseApp;
+    auth: Auth;
+    db: Firestore;
+    functions: Functions;
+    isConfigured: true;
 }
 
-// Initialize Firebase and export the instances.
-const firebaseInstances = initializeFirebase();
-app = firebaseInstances.app;
-auth = firebaseInstances.auth;
-db = firebaseInstances.db;
-functions = firebaseInstances.functions;
+interface UnconfiguredFirebaseServices {
+    app: null;
+    auth: null;
+    db: null;
+    functions: null;
+    isConfigured: false;
+}
 
+let services: FirebaseServices | UnconfiguredFirebaseServices | null = null;
 
-export { app, auth, db, functions };
+function initializeFirebase(): FirebaseServices | UnconfiguredFirebaseServices {
+    const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+    if (!isConfigured) {
+        console.warn("Firebase configuration is missing or incomplete. Please check your .env.local file. Some features will be disabled.");
+        return { app: null, auth: null, db: null, functions: null, isConfigured: false };
+    }
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const functions = getFunctions(app);
+    return { app, auth, db, functions, isConfigured: true };
+}
+
+export function getFirebaseServices(): FirebaseServices | UnconfiguredFirebaseServices {
+  if (!services) {
+    services = initializeFirebase();
+  }
+  return services;
+}

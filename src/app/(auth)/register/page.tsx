@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -8,7 +9,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +50,7 @@ const formSchema = z.object({
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { isFirebaseConfigured } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -62,6 +65,18 @@ export default function RegisterPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    const { auth, db } = getFirebaseServices();
+
+    if (!auth || !db) {
+         toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase is not configured. Please contact the administrator.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
@@ -101,7 +116,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input placeholder="John Doe" {...field} disabled={!isFirebaseConfigured || isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +129,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="name@example.com" {...field} disabled={!isFirebaseConfigured || isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -127,7 +142,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
+                    <Input type="password" placeholder="********" {...field} disabled={!isFirebaseConfigured || isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,7 +154,7 @@ export default function RegisterPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isFirebaseConfigured || isLoading}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -157,7 +172,7 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full !mt-6" disabled={isLoading}>
+            <Button type="submit" className="w-full !mt-6" disabled={isLoading || !isFirebaseConfigured}>
               {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>
@@ -165,7 +180,7 @@ export default function RegisterPage() {
         </Form>
         <div className="mt-6 text-center text-sm">
           Already have an account?{" "}
-          <Link href="/login" className="underline text-primary">
+          <Link href="/login" className={!isFirebaseConfigured ? "pointer-events-none text-muted-foreground" : "underline text-primary"}>
             Sign in
           </Link>
         </div>
@@ -173,3 +188,4 @@ export default function RegisterPage() {
     </Card>
   );
 }
+

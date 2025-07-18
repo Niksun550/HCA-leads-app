@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { addDoc, collection, doc, setDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Lead, AppUser, Remark } from "@/types";
 import { leadStatuses, leadSources, meterTypes, propertyTypes } from "@/types";
@@ -163,6 +163,12 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       toast({ variant: "destructive", title: "You must be logged in" });
       return;
     }
+    const { db } = getFirebaseServices();
+    if (!db) {
+      toast({ variant: "destructive", title: "Submission Failed", description: "Firebase is not configured." });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const owner = users.find(u => u.uid === values.ownerId) || user;

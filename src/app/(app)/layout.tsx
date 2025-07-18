@@ -3,8 +3,8 @@
 
 import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { getFirebaseServices } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import {
   SidebarProvider,
@@ -43,6 +43,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isInitialized, user, router]);
 
   const handleLogout = async () => {
+    const { auth } = getFirebaseServices();
+    if (!auth) return;
     await signOut(auth);
     router.push("/login");
   };

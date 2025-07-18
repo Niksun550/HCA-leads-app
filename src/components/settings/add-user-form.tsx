@@ -33,7 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle } from "lucide-react";
 import { UserRole, userRoles } from "@/types";
-import { functions } from "@/lib/firebase";
+import { getFirebaseServices } from "@/lib/firebase";
 import { httpsCallable } from "firebase/functions";
 
 interface AddUserFormProps {
@@ -48,12 +48,6 @@ const formSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(userRoles),
 });
-
-// We need to create a cloud function to create users.
-// This is because client-side SDKs cannot create users with a specific UID or role.
-// We'll stub this out for now and assume it exists.
-// In a real project, you would deploy this function to Firebase.
-const createUser = httpsCallable(functions, 'createUser');
 
 
 export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserFormProps) {
@@ -72,20 +66,21 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    const { functions } = getFirebaseServices();
+    if (!functions) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
+        setIsSubmitting(false);
+        return;
+    }
+    
     try {
       // In a real application, you would need a Cloud Function to create a user
       // from the admin SDK, as the client SDK doesn't allow role assignment on creation.
-      // For this prototype, we'll simulate this action.
-      console.log("Simulating user creation with:", values);
-      
-      // This is a placeholder. In a real app, you'd use a Cloud Function.
-      // For now, we will log to console and show a success message.
-      // The user won't actually be created in Firebase Auth.
-      
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      const createUser = httpsCallable(functions, 'createUser');
+      await createUser(values);
 
       toast({
-        title: "User Added (Simulated)",
+        title: "User Added",
         description: `User ${values.displayName} has been added with the role ${values.role}.`,
       });
       
@@ -97,7 +92,7 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
       toast({
         variant: "destructive",
         title: "Failed to Add User",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred. You may need to deploy the 'createUser' cloud function.",
       });
     } finally {
       setIsSubmitting(false);
