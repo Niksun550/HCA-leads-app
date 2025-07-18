@@ -25,7 +25,9 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import AddUserForm from '@/components/settings/add-user-form';
 
 export default function SettingsPage() {
   const { user, isInitialized } = useAuth();
@@ -33,6 +35,25 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddUserFormOpen, setIsAddUserFormOpen] = useState(false);
+
+  const fetchUsers = async () => {
+    try {
+      const usersCollection = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersCollection);
+      const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not fetch user data.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -41,25 +62,7 @@ export default function SettingsPage() {
       router.replace('/dashboard');
       return;
     }
-
-    const fetchUsers = async () => {
-      try {
-        const usersCollection = collection(db, 'users');
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not fetch user data.',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    
     fetchUsers();
   }, [isInitialized, user, router, toast]);
 
@@ -84,11 +87,17 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUserAdded = () => {
+    // Re-fetch users to include the new one
+    fetchUsers();
+  };
+
   if (loading || !isInitialized) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-8">
         <div className="flex items-center justify-between">
             <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-32" />
         </div>
          <div className="rounded-lg border shadow-sm">
             <Table>
@@ -127,9 +136,15 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Settings</h1>
-        <p className="text-muted-foreground">Manage users and application settings.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Settings</h1>
+          <p className="text-muted-foreground">Manage users and application settings.</p>
+        </div>
+        <Button onClick={() => setIsAddUserFormOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
       </header>
 
       <div className="rounded-lg border shadow-sm bg-card">
@@ -170,6 +185,11 @@ export default function SettingsPage() {
           </TableBody>
         </Table>
       </div>
+      <AddUserForm 
+        isOpen={isAddUserFormOpen} 
+        setIsOpen={setIsAddUserFormOpen} 
+        onUserAdded={handleUserAdded}
+      />
     </div>
   );
 }

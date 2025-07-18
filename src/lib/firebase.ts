@@ -1,24 +1,31 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApp, getApps } from "firebase/app";
+
+import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFunctions } from 'firebase/functions';
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDaFXEXzCXrZwuwpCxPz-5PujHi_nkazRU",
-  authDomain: "hca-crm.firebaseapp.com",
-  projectId: "hca-crm",
-  storageBucket: "hca-crm.appspot.com",
-  messagingSenderId: "306976606112",
-  appId: "1:306976606112:web:46fc94412fc7c1f91d46c5"
+const firebaseConfig: FirebaseOptions = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// A function to initialize Firebase, but only if the config is valid
+function initializeFirebase() {
+  if (!firebaseConfig.apiKey) {
+    console.error("Firebase API key is missing. Please check your .env.local file.");
+    // Return a dummy object or handle this case as needed
+    // For now, we'll let it proceed, but auth/db calls will fail.
+  }
+  return !getApps().length ? initializeApp(firebaseConfig) : getApp();
+}
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = initializeFirebase();
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
 
-export { app, auth, db };
+export { app, auth, db, functions };
