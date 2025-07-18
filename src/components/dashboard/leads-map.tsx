@@ -39,10 +39,10 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
           <CardTitle>Lead Locations</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center">
+          <p className="text-muted-foreground text-center p-4">
             Google Maps API key is not configured.
             <br />
-            Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.
+            Please create a `.env.local` file and add your key as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
           </p>
         </CardContent>
       </Card>
