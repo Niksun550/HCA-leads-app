@@ -56,10 +56,11 @@ export default function LoginPage() {
     setIsLoading(true);
     const { auth } = getFirebaseServices();
     if (!auth) {
+        // This case is handled by the UI state, but as a safeguard:
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase is not configured. Please contact the administrator.",
+            description: "Firebase is not configured.",
         });
         setIsLoading(false);
         return;
@@ -130,7 +131,7 @@ export default function LoginPage() {
         </Form>
         <div className="mt-6 text-center text-sm">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className={!isFirebaseConfigured ? "pointer-events-none text-muted-foreground" : "underline text-primary"}>
+          <Link href="/register" className={cn("underline text-primary", !isFirebaseConfigured && "pointer-events-none text-muted-foreground")}>
             Sign up
           </Link>
         </div>

@@ -14,39 +14,34 @@ const firebaseConfig = {
 };
 
 interface FirebaseServices {
-    app: FirebaseApp;
-    auth: Auth;
-    db: Firestore;
-    functions: Functions;
-    isConfigured: true;
+  app: FirebaseApp | null;
+  auth: Auth | null;
+  db: Firestore | null;
+  functions: Functions | null;
+  isConfigured: boolean;
 }
 
-interface UnconfiguredFirebaseServices {
-    app: null;
-    auth: null;
-    db: null;
-    functions: null;
-    isConfigured: false;
+let services: FirebaseServices | null = null;
+
+function initializeFirebase(): FirebaseServices {
+  const isConfigured = 
+      !!firebaseConfig.apiKey &&
+      !!firebaseConfig.authDomain &&
+      !!firebaseConfig.projectId;
+
+  if (!isConfigured) {
+    return { app: null, auth: null, db: null, functions: null, isConfigured: false };
+  }
+
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const functions = getFunctions(app);
+
+  return { app, auth, db, functions, isConfigured: true };
 }
 
-let services: FirebaseServices | UnconfiguredFirebaseServices | null = null;
-
-function initializeFirebase(): FirebaseServices | UnconfiguredFirebaseServices {
-    const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
-
-    if (!isConfigured) {
-        console.warn("Firebase configuration is missing or incomplete. Please check your .env.local file. Some features will be disabled.");
-        return { app: null, auth: null, db: null, functions: null, isConfigured: false };
-    }
-
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const functions = getFunctions(app);
-    return { app, auth, db, functions, isConfigured: true };
-}
-
-export function getFirebaseServices(): FirebaseServices | UnconfiguredFirebaseServices {
+export function getFirebaseServices(): FirebaseServices {
   if (!services) {
     services = initializeFirebase();
   }

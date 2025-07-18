@@ -71,7 +71,7 @@ export default function RegisterPage() {
          toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase is not configured. Please contact the administrator.",
+            description: "Firebase is not configured.",
         });
         setIsLoading(false);
         return;
@@ -180,7 +180,7 @@ export default function RegisterPage() {
         </Form>
         <div className="mt-6 text-center text-sm">
           Already have an account?{" "}
-          <Link href="/login" className={!isFirebaseConfigured ? "pointer-events-none text-muted-foreground" : "underline text-primary"}>
+          <Link href="/login" className={cn("underline text-primary", !isFirebaseConfigured && "pointer-events-none text-muted-foreground")}>
             Sign in
           </Link>
         </div>
@@ -188,4 +188,3 @@ export default function RegisterPage() {
     </Card>
   );
 }
-
