@@ -3,7 +3,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 
@@ -25,6 +25,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
+          // Add a small delay to allow Firebase backend to sync auth state for security rules
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
@@ -34,22 +37,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName,
-              role: userData.role || 'Viewer',
+              role: userData.role || 'Viewer', // Default to 'Viewer' if role not set
             });
           } else {
-            // This case might happen during registration if Firestore write fails or is slow
-            // We can create a default user profile here as a fallback.
-            const newUser: AppUser = {
-                 uid: firebaseUser.uid,
-                 email: firebaseUser.email,
-                 displayName: firebaseUser.displayName || "New User",
-                 role: 'Sales Rep'
-            };
-            await setDoc(userDocRef, newUser);
-            setUser(newUser);
+            // This can happen if the user document wasn't created during registration
+            // Or if Firestore rules prevent access temporarily
+            console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);
+             setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              role: 'Sales Rep', // Fallback role
+            });
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
+          // If we can't get the user doc, something is wrong. Log them out.
           setUser(null);
         }
       } else {

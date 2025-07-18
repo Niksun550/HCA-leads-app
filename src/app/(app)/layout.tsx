@@ -35,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Only perform redirects after the auth state has been initialized.
     if (isInitialized && !user) {
       router.replace('/login');
     }
@@ -50,13 +51,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return name.split(' ').map(n => n[0]).join('');
   }
 
-  if (!isInitialized || !user) {
+  // Show a loading screen until the auth state is fully initialized.
+  if (!isInitialized) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
         </div>
       );
   }
+
+  // After initialization, if there's no user, the useEffect will redirect.
+  // We can return null or a loader here to prevent rendering the layout for a moment.
+  if (!user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
 
   return (
       <SidebarProvider>

@@ -52,16 +52,17 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The AuthProvider will handle the redirect on state change.
+      // The AuthProvider and root layout will handle the redirect.
+      // We no longer need to explicitly push the route here.
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Invalid email or password. Please try again.",
+        description: "Invalid email or password. Please try again.",
       });
-    } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
+    // No finally block needed. If successful, component unmounts. If error, setIsLoading(false) is called in catch.
   }
 
   return (
