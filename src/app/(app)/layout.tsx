@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,12 +27,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, LogOut, Sun, ChevronDown } from "lucide-react";
+import { LayoutDashboard, LogOut, Sun, ChevronDown, Settings } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     // Only perform redirects after the auth state has been initialized.
@@ -83,11 +84,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarContent>
           <SidebarMenu>
               <SidebarMenuItem>
-              <SidebarMenuButton href="/dashboard" isActive={true} tooltip="Dashboard">
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-              </SidebarMenuButton>
+                <SidebarMenuButton href="/dashboard" isActive={pathname.startsWith('/dashboard')} tooltip="Dashboard">
+                    <LayoutDashboard />
+                    <span>Dashboard</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
+              {user.role === 'Admin' && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton href="/settings" isActive={pathname.startsWith('/settings')} tooltip="Settings">
+                        <Settings />
+                        <span>Settings</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
           </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4">
