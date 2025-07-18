@@ -98,6 +98,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       form.reset({
         ...lead,
         kwRequirement: lead.kwRequirement || 0,
+        meterType: lead.meterType || '1 Phase',
+        propertyType: lead.propertyType || 'Residential',
         visitDates: lead.visitDates ? lead.visitDates.map(ts => ts.toDate()) : [],
         newRemark: "", // Always clear remark on open
       });
