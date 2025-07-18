@@ -52,8 +52,8 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The AuthProvider and root layout will handle the redirect.
-      // We no longer need to explicitly push the route here.
+      // Explicitly redirect on successful login
+      router.push("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -62,7 +62,7 @@ export default function LoginPage() {
       });
       setIsLoading(false);
     }
-    // No finally block needed. If successful, component unmounts. If error, setIsLoading(false) is called in catch.
+    // No finally block needed. If successful, the router push will navigate away.
   }
 
   return (
