@@ -1,21 +1,22 @@
-
-import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
+// Import the functions you need from the SDKs you need
+import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// IMPORTANT: REPLACE THESE PLACEHOLDER VALUES
-// You must replace these with your actual Firebase project configuration
-// Go to your Firebase project console: Project Settings > General > Your apps > Firebase SDK snippet > Config
-const firebaseConfig: FirebaseOptions = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_AUTH_DOMAIN_HERE",
-  projectId: "YOUR_PROJECT_ID_HERE",
-  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_APP_ID_HERE"
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDaFXEXzCXrZwuwpCxPz-5PujHi_nkazRU",
+  authDomain: "hca-crm.firebaseapp.com",
+  projectId: "hca-crm",
+  storageBucket: "hca-crm.appspot.com",
+  messagingSenderId: "306976606112",
+  appId: "1:306976606112:web:46fc94412fc7c1f91d46c5"
 };
 
-// Do not edit below this line
+
+// Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
