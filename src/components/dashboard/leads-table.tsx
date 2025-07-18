@@ -93,7 +93,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             <TableHead className="hidden md:table-cell">Owner</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden lg:table-cell">KW Req.</TableHead>
-            <TableHead className="hidden lg:table-cell">Source</TableHead>
+            <TableHead className="hidden lg:table-cell">Type</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -112,7 +112,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                     <Badge variant={statusVariant[lead.status] || "secondary"}>{lead.status}</Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">{lead.kwRequirement} KW</TableCell>
-                  <TableCell className="hidden lg:table-cell">{lead.leadBy}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{lead.propertyType}</TableCell>
                   <TableCell className="text-right">
                     {user?.role !== 'Viewer' && (
                        <AlertDialog>
@@ -145,7 +145,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                             <AlertDialogDescription>
                               This action cannot be undone. This will permanently delete this lead
                               and remove its data from our servers.
-                            </AlertDialogDescription>
+                            </DialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>

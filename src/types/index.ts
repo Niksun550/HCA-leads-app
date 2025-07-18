@@ -17,6 +17,12 @@ export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Propo
 export type LeadSource = 'Canopy' | 'TPS' | 'Own' | 'Walk-In' | 'Referral';
 export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own', 'Walk-In', 'Referral'];
 
+export type MeterType = '1 Phase' | '3 Phase';
+export const meterTypes: MeterType[] = ['1 Phase', '3 Phase'];
+
+export type PropertyType = 'Commercial' | 'Residential';
+export const propertyTypes: PropertyType[] = ['Commercial', 'Residential'];
+
 export interface Remark {
   text: string;
   createdAt: Timestamp;
@@ -34,6 +40,8 @@ export interface Lead {
     longitude: number;
   } | null;
   kwRequirement: number;
+  meterType: MeterType;
+  propertyType: PropertyType;
   visitDates: Timestamp[];
   ownerId: string;
   ownerName: string;

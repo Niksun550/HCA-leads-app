@@ -8,8 +8,8 @@ import * as z from "zod";
 import { addDoc, collection, doc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Lead, AppUser, LeadStatus, LeadSource, Remark } from "@/types";
-import { leadStatuses, leadSources } from "@/types";
+import type { Lead, AppUser, Remark } from "@/types";
+import { leadStatuses, leadSources, meterTypes, propertyTypes } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -56,6 +56,8 @@ const formSchema = z.object({
   mobileNumber: z.string().min(10, { message: "Valid mobile number is required" }),
   address: z.string().min(5, { message: "Address is required" }),
   kwRequirement: z.coerce.number().positive({ message: "KW requirement must be positive" }),
+  meterType: z.enum(meterTypes, { required_error: "Meter type is required" }),
+  propertyType: z.enum(propertyTypes, { required_error: "Property type is required" }),
   ownerId: z.string().min(1, { message: "Lead owner is required" }),
   leadBy: z.enum(leadSources, { required_error: "Lead source is required" }),
   status: z.enum(leadStatuses, { required_error: "Status is required" }),
@@ -80,6 +82,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       mobileNumber: "",
       address: "",
       kwRequirement: 0,
+      meterType: '1 Phase',
+      propertyType: 'Residential',
       ownerId: user?.uid,
       leadBy: 'Canopy',
       status: 'New',
@@ -103,6 +107,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         mobileNumber: "",
         address: "",
         kwRequirement: 0,
+        meterType: '1 Phase',
+        propertyType: 'Residential',
         ownerId: user?.uid,
         leadBy: 'Canopy',
         status: 'New',
@@ -156,6 +162,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         mobileNumber: values.mobileNumber,
         address: values.address,
         kwRequirement: values.kwRequirement,
+        meterType: values.meterType,
+        propertyType: values.propertyType,
         ownerId: values.ownerId,
         leadBy: values.leadBy,
         status: values.status,
@@ -229,15 +237,37 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     )}
                  </div>
               </FormItem>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField name="kwRequirement" control={form.control} render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>KW Requirement</FormLabel>
+                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField name="meterType" control={form.control} render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Meter</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>{meterTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField name="propertyType" control={form.control} render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>{propertyTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="kwRequirement" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>KW Requirement</FormLabel>
-                  <FormControl><Input type="number" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField name="status" control={form.control} render={({ field }) => (
+               <FormField name="status" control={form.control} render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -247,9 +277,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                   <FormMessage />
                 </FormItem>
               )} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="leadBy" control={form.control} render={({ field }) => (
+              <FormField name="leadBy" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Lead Source</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -259,19 +287,19 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     <FormMessage />
                     </FormItem>
                 )} />
-                {user?.role === 'Admin' && (
-                    <FormField name="ownerId" control={form.control} render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Lead Owner</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>{users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                )}
             </div>
+             {user?.role === 'Admin' && (
+                <FormField name="ownerId" control={form.control} render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Lead Owner</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>{users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+            )}
             <FormField name="visitDates" control={form.control} render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Visit Dates</FormLabel>
