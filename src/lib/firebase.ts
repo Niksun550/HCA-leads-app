@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -20,12 +21,20 @@ if (
     !firebaseConfig.messagingSenderId ||
     !firebaseConfig.appId
 ) {
-    console.error('Firebase config is not set. Please check your .env.local file and ensure the Next.js server is restarted.');
+    console.error(
+`Firebase config is not set. Please check your .env.local file and ensure all NEXT_PUBLIC_FIREBASE_* variables are set.
+You may need to restart the Next.js development server after updating the file.`
+    );
 }
 
+const getFirebaseApp = () => {
+    if (getApps().length === 0) {
+        return initializeApp(firebaseConfig);
+    }
+    return getApp();
+};
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
+const app = getFirebaseApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
