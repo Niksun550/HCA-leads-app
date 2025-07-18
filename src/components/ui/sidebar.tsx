@@ -559,7 +559,7 @@ const SidebarMenuButton = React.forwardRef<
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : href ? "a" : "button"
+    const Comp = asChild ? Slot : 'button';
     const { isMobile, state } = useSidebar()
 
     const buttonContent = (
@@ -569,26 +569,35 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...(href && { "data-active": isActive })}
         {...props}
       />
     )
-
-    const button = href ? <Link href={href} passHref legacyBehavior>{buttonContent}</Link> : buttonContent;
+    
+    const button = href ? <Link href={href}>{buttonContent}</Link> : buttonContent;
 
     if (!tooltip) {
-      return button
+      return href ? <Link href={href} ref={ref as React.Ref<HTMLAnchorElement>} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} /> : (
+        <button ref={ref} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props} />
+      );
     }
-
+    
     if (typeof tooltip === "string") {
       tooltip = {
         children: tooltip,
       }
     }
 
+    const triggerButton = href ? (
+      <Link href={href} ref={ref as React.Ref<HTMLAnchorElement>} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} />
+    ) : (
+      <button ref={ref} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props} />
+    )
+
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          {triggerButton}
+        </TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
@@ -770,5 +779,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
-    
