@@ -25,9 +25,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
-          // Add a small delay to allow Firebase backend to sync auth state for security rules
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
