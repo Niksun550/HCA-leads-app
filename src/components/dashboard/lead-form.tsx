@@ -79,7 +79,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       address: "",
       kwRequirement: 0,
       ownerId: user?.uid,
-      leadBy: 'Online Ad',
+      leadBy: 'Canopy',
       status: 'New',
       location: null,
       visitDates: [],
@@ -100,7 +100,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         address: "",
         kwRequirement: 0,
         ownerId: user?.uid,
-        leadBy: 'Online Ad',
+        leadBy: 'Canopy',
         status: 'New',
         location: null,
         visitDates: [],
@@ -226,7 +226,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="leadBy" control={form.control} render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Lead By</FormLabel>
+                    <FormLabel>Lead Source</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{leadSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>

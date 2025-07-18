@@ -13,8 +13,8 @@ export interface AppUser {
 export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Closed' | 'Dropped';
 export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Closed', 'Dropped'];
 
-export type LeadSource = 'Referral' | 'Online Ad' | 'Walk-in';
-export const leadSources: LeadSource[] = ['Referral', 'Online Ad', 'Walk-in'];
+export type LeadSource = 'Canopy' | 'TPS' | 'Own';
+export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own'];
 
 export interface Lead {
   id: string;
