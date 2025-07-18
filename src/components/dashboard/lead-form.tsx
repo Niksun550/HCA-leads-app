@@ -93,6 +93,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     },
   });
 
+  const status = form.watch("status");
+
   useEffect(() => {
     if (lead) {
       form.reset({
@@ -302,42 +304,45 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     </FormItem>
                 )} />
             )}
-            <FormField name="visitDates" control={form.control} render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Visit Dates</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("justify-start text-left font-normal", !field.value?.length && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      Add visit dates
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      onSelect={(date) => {
-                        if (date && !field.value.some(d => d.getTime() === date.getTime())) {
-                          field.onChange([...field.value, date]);
-                        }
-                      }}
-                      disabled={(date) => field.value.some(d => d.getTime() === date.getTime())}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {field.value.map((date, i) => (
-                        <Badge key={i} className="flex items-center gap-1">
-                            {format(date, 'PPP')}
-                            <button type="button" onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
-                                <X className="h-3 w-3"/>
-                            </button>
-                        </Badge>
-                    ))}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )} />
+            
+            {status === 'Visited' && (
+              <FormField name="visitDates" control={form.control} render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Visit Dates</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("justify-start text-left font-normal", !field.value?.length && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        Add visit dates
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        onSelect={(date) => {
+                          if (date && !field.value.some(d => d.getTime() === date.getTime())) {
+                            field.onChange([...field.value, date]);
+                          }
+                        }}
+                        disabled={(date) => field.value.some(d => d.getTime() === date.getTime())}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                      {field.value.map((date, i) => (
+                          <Badge key={i} className="flex items-center gap-1">
+                              {format(date, 'PPP')}
+                              <button type="button" onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
+                                  <X className="h-3 w-3"/>
+                              </button>
+                          </Badge>
+                      ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
 
              <FormField name="newRemark" control={form.control} render={({ field }) => (
               <FormItem>
