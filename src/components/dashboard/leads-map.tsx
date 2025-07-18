@@ -1,17 +1,16 @@
+
 "use client";
 
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Lead } from "@/types";
 import { useMemo } from "react";
-import getConfig from 'next/config';
 
 interface LeadsMapProps {
   leads: Lead[];
 }
 
-const { publicRuntimeConfig } = getConfig();
-const apiKey = publicRuntimeConfig.googleMapsApiKey;
+const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const LeadsMap = ({ leads }: LeadsMapProps) => {
   const markers = useMemo(() => leads.filter(lead => lead.location), [leads]);
