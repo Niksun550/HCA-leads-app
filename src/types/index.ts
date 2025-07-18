@@ -10,8 +10,8 @@ export interface AppUser {
   role: UserRole;
 }
 
-export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Closed' | 'Dropped';
-export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Closed', 'Dropped'];
+export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Closed' | 'Dropped';
+export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Closed', 'Dropped'];
 
 export type LeadSource = 'Referral' | 'Online Ad' | 'Walk-in';
 export const leadSources: LeadSource[] = ['Referral', 'Online Ad', 'Walk-in'];

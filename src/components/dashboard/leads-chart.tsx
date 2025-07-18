@@ -4,6 +4,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Lead } from '@/types';
 import { useMemo } from 'react';
+import { leadStatuses } from '@/types';
 
 interface LeadsChartProps {
   leads: Lead[];
@@ -11,14 +12,11 @@ interface LeadsChartProps {
 
 export function LeadsChart({ leads }: LeadsChartProps) {
   const data = useMemo(() => {
-    const statusCounts: { [key: string]: number } = {
-      New: 0,
-      Contacted: 0,
-      Visited: 0,
-      'Proposal Sent': 0,
-      Closed: 0,
-      Dropped: 0,
-    };
+    const statusCounts: { [key: string]: number } = {};
+    leadStatuses.forEach(status => {
+      statusCounts[status] = 0;
+    });
+
     leads.forEach(lead => {
       if (statusCounts[lead.status] !== undefined) {
         statusCounts[lead.status]++;
@@ -42,6 +40,10 @@ export function LeadsChart({ leads }: LeadsChartProps) {
               fontSize={12}
               tickLine={false}
               axisLine={false}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis
               stroke="#888888"

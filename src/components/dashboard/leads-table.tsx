@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -45,6 +44,7 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
   Contacted: "secondary",
   Visited: "outline",
   'Proposal Sent': "default",
+  'Structure Pending': "outline",
   Closed: "default",
   Dropped: "destructive",
 };
