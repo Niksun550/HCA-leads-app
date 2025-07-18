@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle } from "lucide-react";
 import { UserRole, userRoles } from "@/types";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   displayName: z.string().min(1, { message: "Name is required." }),
