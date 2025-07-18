@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer';
@@ -13,8 +14,8 @@ export interface AppUser {
 export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Closed' | 'Dropped';
 export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Closed', 'Dropped'];
 
-export type LeadSource = 'Canopy' | 'TPS' | 'Own';
-export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own'];
+export type LeadSource = 'Canopy' | 'TPS' | 'Own' | 'Walk-In' | 'Referral';
+export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own', 'Walk-In', 'Referral'];
 
 export interface Lead {
   id: string;
