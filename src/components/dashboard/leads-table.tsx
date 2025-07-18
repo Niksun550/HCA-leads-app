@@ -122,7 +122,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                           <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete this lead
                             and remove its data from our servers.
-                          </DialogDescription>
+                          </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
