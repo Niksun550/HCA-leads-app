@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+.yarn/install-state.gz
 
 # testing
 /coverage
@@ -23,22 +24,18 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
 # local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*.local
+*.tsbuildinfo
 
 # vercel
 .vercel
 
 # typescript
+# tsconfig.json is pushed to help editor config, but if it is generated it should be ignored
 *.tsbuildinfo
-next-env.d.ts
 
 # Firebase
-# IMPORTANT: This file contains secret credentials.
-# Do not remove it from .gitignore.
-/src/lib/firebase-config.ts
+# Don't check in credentials
+src/lib/firebase-config.ts
