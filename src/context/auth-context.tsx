@@ -3,7 +3,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 
@@ -37,18 +37,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role || 'Viewer',
             });
           } else {
-            setUser(null);
+            // This case might happen during registration if Firestore write fails or is slow
+            // We can create a default user profile here as a fallback.
+            const newUser: AppUser = {
+                 uid: firebaseUser.uid,
+                 email: firebaseUser.email,
+                 displayName: firebaseUser.displayName || "New User",
+                 role: 'Sales Rep'
+            };
+            await setDoc(userDocRef, newUser);
+            setUser(newUser);
           }
         } catch (error) {
           console.error("Error fetching user document:", error);
           setUser(null);
-        } finally {
-           setIsInitialized(true);
         }
       } else {
         setUser(null);
-        setIsInitialized(true);
       }
+      setIsInitialized(true);
     });
 
     return () => unsubscribe();
