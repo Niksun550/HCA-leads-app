@@ -17,6 +17,13 @@ export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Propo
 export type LeadSource = 'Canopy' | 'TPS' | 'Own' | 'Walk-In' | 'Referral';
 export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own', 'Walk-In', 'Referral'];
 
+export interface Remark {
+  text: string;
+  createdAt: Timestamp;
+  authorName: string;
+  authorId: string;
+}
+
 export interface Lead {
   id: string;
   customerName: string;
@@ -33,4 +40,5 @@ export interface Lead {
   leadBy: LeadSource;
   status: LeadStatus;
   createdAt: Timestamp;
+  remarks: Remark[];
 }

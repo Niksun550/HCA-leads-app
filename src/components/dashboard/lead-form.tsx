@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,7 +8,7 @@ import * as z from "zod";
 import { addDoc, collection, doc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Lead, AppUser, LeadStatus, LeadSource } from "@/types";
+import type { Lead, AppUser, LeadStatus, LeadSource, Remark } from "@/types";
 import { leadStatuses, leadSources } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -63,6 +64,7 @@ const formSchema = z.object({
     longitude: z.number(),
   }).nullable(),
   visitDates: z.array(z.date()),
+  newRemark: z.string().optional(),
 });
 
 export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormProps) {
@@ -83,6 +85,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       status: 'New',
       location: null,
       visitDates: [],
+      newRemark: "",
     },
   });
 
@@ -92,6 +95,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         ...lead,
         kwRequirement: lead.kwRequirement || 0,
         visitDates: lead.visitDates ? lead.visitDates.map(ts => ts.toDate()) : [],
+        newRemark: "", // Always clear remark on open
       });
     } else {
       form.reset({
@@ -104,6 +108,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         status: 'New',
         location: null,
         visitDates: [],
+        newRemark: "",
       });
     }
   }, [lead, user, form, isOpen]);
@@ -134,11 +139,31 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     setIsSubmitting(true);
     try {
       const owner = users.find(u => u.uid === values.ownerId) || user;
+      
+      const remarks = lead?.remarks ? [...lead.remarks] : [];
+      if (values.newRemark) {
+        const newRemark: Remark = {
+          text: values.newRemark,
+          createdAt: Timestamp.now(),
+          authorName: user.displayName || 'Unknown User',
+          authorId: user.uid,
+        };
+        remarks.push(newRemark);
+      }
+      
       const data = {
-        ...values,
+        customerName: values.customerName,
+        mobileNumber: values.mobileNumber,
+        address: values.address,
+        kwRequirement: values.kwRequirement,
+        ownerId: values.ownerId,
+        leadBy: values.leadBy,
+        status: values.status,
+        location: values.location,
         ownerName: owner.displayName,
         visitDates: values.visitDates.map(d => Timestamp.fromDate(d)),
         createdAt: lead ? lead.createdAt : Timestamp.now(),
+        remarks: remarks,
       };
 
       if (lead) {
@@ -283,6 +308,15 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 <FormMessage />
               </FormItem>
             )} />
+
+             <FormField name="newRemark" control={form.control} render={({ field }) => (
+              <FormItem>
+                <FormLabel>Remark</FormLabel>
+                <FormControl><Textarea placeholder="Add a new remark about status changes or other updates..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
