@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -67,6 +67,7 @@ const formSchema = z.object({
   }).nullable(),
   visitDates: z.array(z.date()),
   newRemark: z.string().optional(),
+  structureTeamMemberId: z.string().optional().nullable(),
 });
 
 export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormProps) {
@@ -90,10 +91,15 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       location: null,
       visitDates: [],
       newRemark: "",
+      structureTeamMemberId: null,
     },
   });
 
   const status = form.watch("status");
+
+  const structureTeamUsers = useMemo(() => {
+    return users.filter(u => u.role === 'Structure');
+  }, [users]);
 
   useEffect(() => {
     if (lead) {
@@ -103,7 +109,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         meterType: lead.meterType || '1 Phase',
         propertyType: lead.propertyType || 'Residential',
         visitDates: lead.visitDates ? lead.visitDates.map(ts => ts.toDate()) : [],
-        newRemark: "", // Always clear remark on open
+        structureTeamMemberId: lead.structureTeamMemberId || null,
+        newRemark: "",
       });
     } else {
       form.reset({
@@ -119,14 +126,17 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         location: null,
         visitDates: [],
         newRemark: "",
+        structureTeamMemberId: null,
       });
     }
   }, [lead, user, form, isOpen]);
 
-  // When status changes, if it's not 'Visited', clear the dates.
   useEffect(() => {
     if (status !== 'Visited') {
       form.setValue('visitDates', []);
+    }
+    if (status !== 'Structure Pending') {
+      form.setValue('structureTeamMemberId', null);
     }
   }, [status, form]);
 
@@ -156,7 +166,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     setIsSubmitting(true);
     try {
       const owner = users.find(u => u.uid === values.ownerId) || user;
-      
+      const structureTeamMember = users.find(u => u.uid === values.structureTeamMemberId);
+
       const remarks = lead?.remarks ? [...lead.remarks] : [];
       if (values.newRemark) {
         const newRemark: Remark = {
@@ -176,17 +187,18 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         meterType: values.meterType,
         propertyType: values.propertyType,
         ownerId: values.ownerId,
+        ownerName: owner.displayName,
         leadBy: values.leadBy,
         status: values.status,
         location: values.location,
-        ownerName: owner.displayName,
         visitDates: values.visitDates.map(d => Timestamp.fromDate(d)),
         createdAt: lead ? lead.createdAt : Timestamp.now(),
         remarks: remarks,
         closedAt: lead?.closedAt || null,
+        structureTeamMemberId: values.structureTeamMemberId || null,
+        structureTeamMemberName: structureTeamMember?.displayName || null,
       };
 
-      // Handle closedAt logic
       if (values.status === 'Closed' && lead?.status !== 'Closed') {
         data.closedAt = Timestamp.now();
       } else if (values.status !== 'Closed') {
@@ -201,13 +213,16 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         toast({ title: "Lead added successfully!" });
       }
       setIsOpen(false);
-    } catch (error: any) {
+    } catch (error: any)
+{
       toast({ variant: "destructive", title: "Submission Failed", description: error.message });
     } finally {
       setIsSubmitting(false);
     }
   };
   
+  const isStructureForm = user?.role === 'Structure';
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -223,14 +238,14 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
               <FormField name="customerName" control={form.control} render={({ field }) => (
                 <FormItem>
                   <FormLabel>Customer Name</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField name="mobileNumber" control={form.control} render={({ field }) => (
                 <FormItem>
                   <FormLabel>Mobile Number</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -238,14 +253,14 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
             <FormField name="address" control={form.control} render={({ field }) => (
               <FormItem>
                 <FormLabel>Address</FormLabel>
-                <FormControl><Textarea {...field} /></FormControl>
+                <FormControl><Textarea {...field} disabled={isStructureForm} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
              <FormItem>
                 <FormLabel>Live Location</FormLabel>
                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={handleLocation} disabled={isLocating}>
+                    <Button type="button" variant="outline" onClick={handleLocation} disabled={isLocating || isStructureForm}>
                         {isLocating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <LocateFixed className="mr-2 h-4 w-4" />}
                         Get Current Location
                     </Button>
@@ -260,14 +275,14 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 <FormField name="kwRequirement" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>KW Requirement</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormControl><Input type="number" {...field} disabled={isStructureForm} /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )} />
                 <FormField name="meterType" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Meter</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{meterTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
@@ -277,7 +292,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 <FormField name="propertyType" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{propertyTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
@@ -299,7 +314,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
               <FormField name="leadBy" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Lead Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{leadSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
@@ -311,7 +326,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 <FormField name="ownerId" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Lead Owner</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)}</SelectContent>
                     </Select>
@@ -320,14 +335,34 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 )} />
             )}
             
+            {status === 'Structure Pending' && !isStructureForm && (
+              <FormField name="structureTeamMemberId" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assign to Structure Team</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {structureTeamUsers.length > 0 ? (
+                        structureTeamUsers.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)
+                      ) : (
+                        <SelectItem value="-" disabled>No structure team members found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+
             <FormField name="visitDates" control={form.control} render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className={cn(status !== 'Visited' && "text-muted-foreground/50")}>Visit Dates</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
-                      disabled={status !== 'Visited'}
+                      disabled={status !== 'Visited' || isStructureForm}
                       className={cn(
                         "justify-start text-left font-normal",
                         !field.value?.length && "text-muted-foreground"
@@ -354,7 +389,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     {field.value.map((date, i) => (
                         <Badge key={i} className="flex items-center gap-1">
                             {format(date, 'PPP')}
-                            <button type="button" disabled={status !== 'Visited'} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
+                            <button type="button" disabled={status !== 'Visited' || isStructureForm} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
                                 <X className="h-3 w-3"/>
                             </button>
                         </Badge>
@@ -371,7 +406,6 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 <FormMessage />
               </FormItem>
             )} />
-
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>

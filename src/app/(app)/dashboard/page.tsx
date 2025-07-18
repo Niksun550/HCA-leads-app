@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
@@ -40,14 +40,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isInitialized || !user) {
-      // Wait for auth context to be initialized and user to be available
       return;
     }
 
     setLoading(true);
 
     const fetchUsersAndLeads = async () => {
-      // Set the current user immediately. For Admins, fetch others.
       setAllUsers([user]);
 
       if (user.role === 'Admin') {
@@ -58,17 +56,22 @@ export default function DashboardPage() {
           setAllUsers(usersData);
         } catch (error) {
           console.error("Error fetching users:", error);
-          // Fallback to only the current user if fetching fails
           setAllUsers([user]);
         }
       }
 
-      // Determine the query based on the user's role
-      const leadsQuery = user.role === 'Admin'
-        ? query(collection(db, 'leads'))
-        : query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+      let leadsQuery;
+      if (user.role === 'Admin' || user.role === 'Viewer') {
+          leadsQuery = query(collection(db, 'leads'));
+      } else if (user.role === 'Sales Rep') {
+          leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+      } else if (user.role === 'Structure') {
+          leadsQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
+      } else {
+          // Default to no leads if role is unrecognized
+          leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
+      }
 
-      // Subscribe to lead updates
       const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
         const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
         setLeads(leadsData);
@@ -78,7 +81,6 @@ export default function DashboardPage() {
         setLoading(false);
       });
 
-      // Return the cleanup function for the subscription
       return unsubscribeLeads;
     };
 
@@ -87,7 +89,6 @@ export default function DashboardPage() {
         unsubscribe = unsub;
     });
 
-    // Cleanup subscription on component unmount
     return () => {
       if (unsubscribe) {
         unsubscribe();
@@ -165,7 +166,7 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {user?.role !== 'Viewer' && (
+          {user?.role !== 'Viewer' && user?.role !== 'Structure' && (
             <Button onClick={handleAddLead}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Lead

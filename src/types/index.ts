@@ -1,8 +1,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer';
-export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer'];
+export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer' | 'Structure';
+export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer', 'Structure'];
 
 export interface AppUser {
   uid: string;
@@ -50,4 +50,6 @@ export interface Lead {
   createdAt: Timestamp;
   remarks: Remark[];
   closedAt?: Timestamp | null;
+  structureTeamMemberId?: string | null;
+  structureTeamMemberName?: string | null;
 }
