@@ -32,9 +32,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle } from "lucide-react";
-import { UserRole, userRoles } from "@/types";
-import { getFirebaseServices } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
+import { userRoles } from "@/types";
 
 interface AddUserFormProps {
   isOpen: boolean;
@@ -66,18 +64,21 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    const { functions } = getFirebaseServices();
-    if (!functions) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
-        setIsSubmitting(false);
-        return;
-    }
     
     try {
-      // In a real application, you would need a Cloud Function to create a user
-      // from the admin SDK, as the client SDK doesn't allow role assignment on creation.
-      const createUser = httpsCallable(functions, 'createUser');
-      await createUser(values);
+      const response = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Something went wrong');
+      }
 
       toast({
         title: "User Added",
@@ -92,7 +93,7 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
       toast({
         variant: "destructive",
         title: "Failed to Add User",
-        description: error.message || "An unexpected error occurred. You may need to deploy the 'createUser' cloud function.",
+        description: error.message || "An unexpected error occurred.",
       });
     } finally {
       setIsSubmitting(false);
@@ -105,7 +106,7 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
         <DialogHeader>
           <DialogTitle className="font-headline">Add New User</DialogTitle>
           <DialogDescription>
-            Create a new user account and assign them a role. They will receive an email to set up their account.
+            Create a new user account and assign them a role. They will be able to log in with the password you provide.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -141,7 +142,7 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Temporary Password</FormLabel>
+                  <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input type="password" {...field} />
                   </FormControl>
