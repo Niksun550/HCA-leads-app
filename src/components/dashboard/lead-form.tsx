@@ -168,7 +168,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         remarks.push(newRemark);
       }
       
-      const data = {
+      const data: Omit<Lead, 'id'> = {
         customerName: values.customerName,
         mobileNumber: values.mobileNumber,
         address: values.address,
@@ -183,13 +183,21 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         visitDates: values.visitDates.map(d => Timestamp.fromDate(d)),
         createdAt: lead ? lead.createdAt : Timestamp.now(),
         remarks: remarks,
+        closedAt: lead?.closedAt || null,
       };
+
+      // Handle closedAt logic
+      if (values.status === 'Closed' && lead?.status !== 'Closed') {
+        data.closedAt = Timestamp.now();
+      } else if (values.status !== 'Closed') {
+        data.closedAt = null;
+      }
 
       if (lead) {
         await setDoc(doc(db, "leads", lead.id), data, { merge: true });
         toast({ title: "Lead updated successfully!" });
       } else {
-        await addDoc(collection(db, "leads"), data);
+        await addDoc(collection(db, "leads"), data as any);
         toast({ title: "Lead added successfully!" });
       }
       setIsOpen(false);

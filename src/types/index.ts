@@ -49,4 +49,5 @@ export interface Lead {
   status: LeadStatus;
   createdAt: Timestamp;
   remarks: Remark[];
+  closedAt?: Timestamp | null;
 }
