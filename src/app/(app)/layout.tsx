@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -34,6 +34,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    if (isInitialized && !user) {
+      router.replace('/login');
+    }
+  }, [isInitialized, user, router]);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
@@ -44,21 +50,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return name.split(' ').map(n => n[0]).join('');
   }
 
-  if (!isInitialized) {
+  if (!isInitialized || !user) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
         </div>
       );
-  }
-
-  if (!user) {
-    router.replace('/login');
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
   }
 
   return (
