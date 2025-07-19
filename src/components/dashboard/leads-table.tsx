@@ -77,7 +77,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Customer</TableHead>
-            <TableHead className="hidden md:table-cell">Owner</TableHead>
+            <TableHead className="hidden md:table-cell">Assigned To</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden lg:table-cell">KW Req.</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -90,8 +90,19 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                 <TableCell>
                   <div className="font-medium">{lead.customerName}</div>
                   <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
+                   <div className="text-sm text-muted-foreground md:hidden">
+                    {lead.structureTeamMemberName ? `${lead.structureTeamMemberName} (Structure)` : lead.ownerName}
+                  </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{lead.ownerName}</TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {lead.structureTeamMemberName ? (
+                    <div>
+                      {lead.structureTeamMemberName} <Badge variant="outline">Structure</Badge>
+                    </div>
+                  ) : (
+                    lead.ownerName
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{lead.status}</Badge>
                 </TableCell>
@@ -128,7 +139,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                           <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete this lead
                             and remove its data from our servers.
-                          </AlertDialogDescription>
+                          </Description>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
