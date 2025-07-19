@@ -5,18 +5,19 @@ import * as admin from 'firebase-admin';
 let adminApp: admin.app.App | null = null;
 
 function initializeAdmin() {
-  if (adminApp) {
-    return adminApp;
+  if (admin.apps.some(app => app?.name === 'firebase-admin-app')) {
+    return admin.app('firebase-admin-app');
   }
 
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
   if (!serviceAccountKey) {
-    console.error('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Admin SDK initialization failed.');
+    console.error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Admin SDK initialization failed.');
     return null;
   }
 
   try {
+    // Firebase Admin SDK expects an object, not a JSON string.
     const serviceAccount = JSON.parse(serviceAccountKey);
     
     adminApp = admin.initializeApp({
@@ -25,7 +26,7 @@ function initializeAdmin() {
 
     return adminApp;
   } catch (error) {
-    console.error('Error initializing Firebase Admin SDK:', error);
+    console.error('Error initializing Firebase Admin SDK. Make sure FIREBASE_SERVICE_ACCOUNT_KEY is a valid JSON string.', error);
     return null;
   }
 }

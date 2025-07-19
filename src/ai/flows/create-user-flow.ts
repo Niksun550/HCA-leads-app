@@ -43,7 +43,9 @@ const createUserFlow = ai.defineFlow(
     const db = getAdminFirestore();
 
     if (!auth || !db) {
-      return { error: 'Firebase Admin SDK not initialized. Check server logs.' };
+      const errorMessage = 'Firebase Admin SDK not initialized. Check server logs for details. Ensure FIREBASE_SERVICE_ACCOUNT_KEY is set correctly in .env.local.';
+      console.error(errorMessage);
+      return { error: errorMessage };
     }
 
     try {
@@ -54,17 +56,33 @@ const createUserFlow = ai.defineFlow(
         emailVerified: true, // Admins can create verified users
       });
 
-      await db.collection('users').doc(userRecord.uid).set({
-        uid: userRecord.uid,
-        email: input.email,
-        displayName: input.displayName,
-        role: input.role,
-      });
+      try {
+        await db.collection('users').doc(userRecord.uid).set({
+            uid: userRecord.uid,
+            email: input.email,
+            displayName: input.displayName,
+            role: input.role,
+        });
+      } catch (firestoreError: any) {
+        // If Firestore write fails, we should ideally delete the created auth user
+        // for consistency, but for now, we'll just report the error.
+        console.error('Firestore user creation failed after Auth user was created:', firestoreError);
+        return { error: `User was created in authentication, but failed to save to database: ${firestoreError.message}` };
+      }
+
 
       return { uid: userRecord.uid };
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      return { error: error.message || 'An unknown error occurred while creating the user.' };
+      console.error('Error creating user in Firebase Auth:', error);
+      
+      let errorMessage = 'An unknown error occurred while creating the user.';
+      if (error.code === 'auth/email-already-exists') {
+        errorMessage = 'This email address is already in use by another account.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return { error: errorMessage };
     }
   }
 );
