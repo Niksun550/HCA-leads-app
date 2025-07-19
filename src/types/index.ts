@@ -11,8 +11,11 @@ export interface AppUser {
   role: UserRole;
 }
 
-export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Closed' | 'Dropped';
-export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Closed', 'Dropped'];
+export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Site Visit Done' | 'IN Design' | 'Quotation Send' | 'Closed' | 'Dropped';
+export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send', 'Closed', 'Dropped'];
+
+export const structureLeadStatuses: LeadStatus[] = ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending'];
+
 
 export type LeadSource = 'Canopy' | 'TPS' | 'Own' | 'Walk-In' | 'Referral';
 export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own', 'Walk-In', 'Referral'];

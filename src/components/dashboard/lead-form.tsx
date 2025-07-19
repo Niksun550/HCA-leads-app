@@ -9,7 +9,7 @@ import { addDoc, collection, doc, setDoc, Timestamp } from "firebase/firestore";
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Lead, AppUser, Remark } from "@/types";
-import { leadStatuses, leadSources, meterTypes, propertyTypes } from "@/types";
+import { leadStatuses, leadSources, meterTypes, propertyTypes, structureLeadStatuses } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -100,6 +100,15 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   const structureTeamUsers = useMemo(() => {
     return users.filter(u => u.role === 'Structure');
   }, [users]);
+  
+  const isStructureForm = user?.role === 'Structure';
+  
+  const availableStatuses = useMemo(() => {
+    if (isStructureForm) {
+      return structureLeadStatuses;
+    }
+    return leadStatuses.filter(s => !structureLeadStatuses.includes(s) || s === 'Structure Pending');
+  }, [isStructureForm]);
 
   useEffect(() => {
     if (lead) {
@@ -135,10 +144,10 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     if (status !== 'Visited') {
       form.setValue('visitDates', []);
     }
-    if (status !== 'Structure Pending') {
+    if (status !== 'Structure Pending' && !isStructureForm) {
       form.setValue('structureTeamMemberId', null);
     }
-  }, [status, form]);
+  }, [status, form, isStructureForm]);
 
   const handleLocation = () => {
     setIsLocating(true);
@@ -227,8 +236,6 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     }
   };
   
-  const isStructureForm = user?.role === 'Structure';
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -310,9 +317,9 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                <FormField name="status" control={form.control} render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>{leadStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    <SelectContent>{availableStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
