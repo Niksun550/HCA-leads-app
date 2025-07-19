@@ -1,28 +1,51 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isUserInRole(role) {
-      return getUserData(request.auth.uid).role == role;
+    function isAuth() {
+      return request.auth != null;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+    
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuth() && getUserRole(request.auth.uid) == 'Admin';
     }
 
     match /users/{userId} {
-      allow create: if request.auth.uid == userId;
-      allow read: if request.auth != null;
-      allow update: if request.auth.uid == userId;
-      allow delete: if isUserInRole('Admin');
+      allow read: if isUser(userId) || isAdmin();
+      allow create: if isAuth(); // For registration
+      allow update: if isUser(userId) || isAdmin(); // Admins can change roles
     }
 
     match /leads/{leadId} {
-      allow read: if isUserInRole('Admin') || request.auth.uid == resource.data.ownerId;
-      allow create: if isUserInRole('Admin') || isUserInRole('Sales Rep');
-      allow update: if isUserInRole('Admin') || (isUserInRole('Sales Rep') && request.auth.uid == resource.data.ownerId);
-      allow delete: if isUserInRole('Admin');
+      allow read: if isAuth() && (
+        getUserRole(request.auth.uid) == 'Admin' ||
+        getUserRole(request.auth.uid) == 'Viewer' ||
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.structureTeamMemberId == request.auth.uid
+      );
+      
+      allow create: if isAuth() && (
+        getUserRole(request.auth.uid) == 'Admin' ||
+        getUserRole(request.auth.uid) == 'Sales Rep'
+      );
+
+      allow update: if isAuth() && (
+        isAdmin() ||
+        (getUserRole(request.auth.uid) == 'Sales Rep' && resource.data.ownerId == request.auth.uid) ||
+        (getUserRole(request.auth.uid) == 'Structure' && resource.data.structureTeamMemberId == request.auth.uid)
+      );
+
+      allow delete: if isAdmin();
     }
   }
 }
