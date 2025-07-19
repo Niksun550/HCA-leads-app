@@ -33,6 +33,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle } from "lucide-react";
 import { userRoles } from "@/types";
+import { createUser } from "@/ai/flows/create-user-flow";
+
 
 interface AddUserFormProps {
   isOpen: boolean;
@@ -66,18 +68,10 @@ export default function AddUserForm({ isOpen, setIsOpen, onUserAdded }: AddUserF
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('/api/create-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
+      const result = await createUser(values);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Something went wrong');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       toast({
