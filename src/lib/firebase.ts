@@ -1,7 +1,6 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
-import { getFunctions, Functions } from "firebase/functions";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,30 +11,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// This function initializes and returns Firebase services
-function initializeFirebase() {
+function getFirebaseServices() {
   const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
-  
   if (!isConfigured) {
-    console.warn("Firebase configuration is missing or incomplete. Features requiring Firebase will be disabled.");
-    return { app: null, auth: null, db: null, functions: null, isConfigured: false };
+    console.warn("Firebase is not configured. Please check your .env.local file.");
+    return { isConfigured, app: null, auth: null, db: null };
   }
 
-  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const functions = getFunctions(app);
 
-  return { app, auth, db, functions, isConfigured: true };
+  return { isConfigured, app, auth, db };
 }
 
-// We call the function once and export the services
-// This avoids re-initializing on every import
-const { app, auth, db, functions, isConfigured } = initializeFirebase();
-
-export { app, auth, db, functions, isConfigured };
-
-// A getter function to be used in components, ensuring they get the initialized services
-export const getFirebaseServices = () => {
-    return { auth, db, functions, isConfigured };
-}
+export { getFirebaseServices };
