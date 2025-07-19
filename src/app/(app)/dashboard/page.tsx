@@ -53,18 +53,14 @@ export default function DashboardPage() {
     setLoading(true);
 
     const fetchUsersAndLeads = async () => {
-      setAllUsers([user]);
-
-      if (user.role === 'Admin') {
-        try {
-          const usersCollection = collection(db, 'users');
-          const usersSnapshot = await getDocs(usersCollection);
-          const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
-          setAllUsers(usersData);
-        } catch (error) {
-          console.error("Error fetching users:", error);
-          setAllUsers([user]);
-        }
+      try {
+        const usersCollection = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersCollection);
+        const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+        setAllUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        setAllUsers([user]); // Fallback to current user
       }
 
       let leadsQuery;
