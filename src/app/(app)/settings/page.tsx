@@ -23,9 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoaderCircle } from 'lucide-react';
+import AddUserForm from '@/components/settings/add-user-form';
 
 export default function SettingsPage() {
   const { user, isInitialized } = useAuth();
@@ -33,8 +36,10 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddUserFormOpen, setIsAddUserFormOpen] = useState(false);
 
   const fetchUsers = async () => {
+    setLoading(true);
     const { db } = getFirebaseServices();
     if (!db) {
         toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
@@ -96,6 +101,11 @@ export default function SettingsPage() {
       });
     }
   };
+  
+  const onUserAdded = () => {
+    fetchUsers();
+  };
+
 
   if (loading || !isInitialized) {
     return (
@@ -140,12 +150,17 @@ export default function SettingsPage() {
   }
 
   return (
+    <>
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-      <header>
+      <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Settings</h1>
           <p className="text-muted-foreground">Manage user roles.</p>
         </div>
+        <Button onClick={() => setIsAddUserFormOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+        </Button>
       </header>
 
       <div className="rounded-lg border shadow-sm bg-card">
@@ -187,5 +202,11 @@ export default function SettingsPage() {
         </Table>
       </div>
     </div>
+    <AddUserForm 
+        isOpen={isAddUserFormOpen}
+        setIsOpen={setIsAddUserFormOpen}
+        onUserAdded={onUserAdded}
+    />
+    </>
   );
 }
