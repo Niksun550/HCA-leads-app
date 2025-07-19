@@ -1,8 +1,7 @@
-
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
-import { getFunctions, type Functions } from "firebase/functions";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getFunctions, Functions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,23 +12,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-interface FirebaseServices {
-  app: FirebaseApp | null;
-  auth: Auth | null;
-  db: Firestore | null;
-  functions: Functions | null;
-  isConfigured: boolean;
-}
-
-let services: FirebaseServices | null = null;
-
-function initializeFirebase(): FirebaseServices {
-  const isConfigured = 
-      !!firebaseConfig.apiKey &&
-      !!firebaseConfig.authDomain &&
-      !!firebaseConfig.projectId;
-
+// This function initializes and returns Firebase services
+function initializeFirebase() {
+  const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
+  
   if (!isConfigured) {
+    console.warn("Firebase configuration is missing or incomplete. Features requiring Firebase will be disabled.");
     return { app: null, auth: null, db: null, functions: null, isConfigured: false };
   }
 
@@ -41,9 +29,13 @@ function initializeFirebase(): FirebaseServices {
   return { app, auth, db, functions, isConfigured: true };
 }
 
-export function getFirebaseServices(): FirebaseServices {
-  if (!services) {
-    services = initializeFirebase();
-  }
-  return services;
+// We call the function once and export the services
+// This avoids re-initializing on every import
+const { app, auth, db, functions, isConfigured } = initializeFirebase();
+
+export { app, auth, db, functions, isConfigured };
+
+// A getter function to be used in components, ensuring they get the initialized services
+export const getFirebaseServices = () => {
+    return { auth, db, functions, isConfigured };
 }
