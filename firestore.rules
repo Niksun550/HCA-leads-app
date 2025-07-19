@@ -3,56 +3,47 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAuth() {
-      return request.auth != null;
+    // Helper function to check if a user has a specific role
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
-    function isUser(userId) {
-      return isAuth() && request.auth.uid == userId;
+    // Helper function to check if the user is the owner of a document
+    function isOwner(doc) {
+      return request.auth.uid == doc.data.ownerId;
     }
 
-    function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    function isSalesRep() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Sales Rep';
-    }
-    
-    function isViewer() {
-        return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Viewer';
-    }
-
-    function isStructureTeamMember() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Structure';
+    // Helper function to check if the user is assigned to the structure team for a lead
+    function isStructureTeamMember(doc) {
+      return request.auth.uid == doc.data.structureTeamMemberId;
     }
 
     match /users/{userId} {
+      // Allow any authenticated user to read the list of users.
+      // Allow admins to read any specific user document.
+      allow read: if request.auth != null;
+      
+      // Allow users to update their own data (but not their role)
+      allow update: if request.auth.uid == userId && !('role' in request.resource.data);
+      // Only admins can change roles
+      allow update: if hasRole('Admin') && 'role' in request.resource.data;
+      // Allow new user creation
       allow create: if request.auth.uid == userId;
-      allow read: if isUser(userId) || isAdmin();
-      allow update: if isUser(userId) || isAdmin(); 
-      allow delete: if false; // Generally, don't allow user deletion from client
     }
 
     match /leads/{leadId} {
-      allow read: if isAuth() && (isAdmin() || isViewer());
-      allow create: if isAuth() && (isAdmin() || isSalesRep());
-
-      // Allow Admins to write to any lead
-      // Allow Sales Rep to write to their own lead
-      // Allow Structure team to write to leads assigned to them
-      allow write: if isAuth() && 
-                    (isAdmin() || 
-                    (isSalesRep() && resource.data.ownerId == request.auth.uid) ||
-                    (isStructureTeamMember() && resource.data.structureTeamMemberId == request.auth.uid));
-
-      // Granular update/delete for non-admins
-      allow update: if isAuth() && 
-                    (isSalesRep() && resource.data.ownerId == request.auth.uid) ||
-                    (isStructureTeamMember() && resource.data.structureTeamMemberId == request.auth.uid);
+      // Admins can do anything
+      allow read, write: if hasRole('Admin');
       
-      allow delete: if isAdmin();
+      // Sales Reps can create leads, and can read/write their own leads
+      allow create: if hasRole('Sales Rep');
+      allow read, update: if hasRole('Sales Rep') && isOwner(resource);
+      
+      // Viewers can only read all leads
+      allow read: if hasRole('Viewer');
+
+      // Structure team can read/update leads assigned to them
+      allow read, update: if hasRole('Structure') && isStructureTeamMember(resource);
     }
   }
 }
