@@ -7,7 +7,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
@@ -24,6 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { leadStatuses, structureLeadStatuses } from '@/types';
+import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
+
 
 export default function DashboardPage() {
   const { user, isInitialized } = useAuth();
@@ -128,6 +131,29 @@ export default function DashboardPage() {
     return leads.filter(lead => statusFilters[lead.status]);
   }, [leads, statusFilters]);
 
+  const handleExport = () => {
+    const dataToExport = filteredLeads.map(lead => ({
+      'Customer Name': lead.customerName,
+      'Mobile Number': lead.mobileNumber,
+      'Address': lead.address,
+      'KW Requirement': lead.kwRequirement,
+      'Status': lead.status,
+      'Lead Owner': lead.ownerName,
+      'Assigned To': lead.structureTeamMemberName || lead.ownerName,
+      'Created At': lead.createdAt ? format(lead.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '',
+      'Closed At': lead.closedAt ? format(lead.closedAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
+      'Lead Source': lead.leadBy,
+      'Property Type': lead.propertyType,
+      'Meter Type': lead.meterType
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Leads');
+    XLSX.writeFile(workbook, `SolarLeads_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+
   if (!isInitialized || loading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -183,6 +209,10 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="outline" onClick={handleExport} disabled={filteredLeads.length === 0}>
+             <FileSpreadsheet className="mr-2 h-4 w-4" />
+             Export
+          </Button>
           {user?.role !== 'Viewer' && user?.role !== 'Structure' && user?.role !== 'Director' && (
             <Button onClick={handleAddLead}>
               <PlusCircle className="mr-2 h-4 w-4" />
