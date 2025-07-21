@@ -33,6 +33,13 @@ export interface Remark {
   authorId: string;
 }
 
+export interface Attachment {
+  name: string;
+  url: string;
+  type: string;
+  uploadedAt: Timestamp;
+}
+
 export interface Lead {
   id: string;
   customerName: string;
@@ -52,6 +59,7 @@ export interface Lead {
   status: LeadStatus;
   createdAt: Timestamp;
   remarks: Remark[];
+  attachments?: Attachment[];
   closedAt?: Timestamp | null;
   structureTeamMemberId?: string | null;
   structureTeamMemberName?: string | null;
