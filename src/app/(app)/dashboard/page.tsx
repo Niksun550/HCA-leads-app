@@ -141,8 +141,8 @@ export default function DashboardPage() {
       'Status': lead.status,
       'Lead Owner': lead.ownerName,
       'Assigned To': lead.structureTeamMemberName || lead.ownerName,
-      'Created At': lead.createdAt ? format(lead.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '',
-      'Closed At': lead.closedAt ? format(lead.closedAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
+      'Created At': lead.createdAt && lead.createdAt.toDate ? format(lead.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : '',
+      'Closed At': lead.closedAt && lead.closedAt.toDate ? format(lead.closedAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A',
       'Lead Source': lead.leadBy,
       'Property Type': lead.propertyType,
       'Meter Type': lead.meterType
