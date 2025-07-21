@@ -1,5 +1,5 @@
 
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -14,12 +14,12 @@ const firebaseConfig = {
 
 function getFirebaseServices() {
   const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
-
   if (!isConfigured) {
+    console.warn("Firebase is not configured. Please check your .env.local file.");
     return { isConfigured: false, app: null, auth: null, db: null };
   }
 
-  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   const auth = getAuth(app);
   const db = getFirestore(app);
 
