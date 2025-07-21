@@ -78,6 +78,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
           <TableRow>
             <TableHead>Customer</TableHead>
             <TableHead className="hidden md:table-cell">Assigned To</TableHead>
+            <TableHead className="hidden lg:table-cell">Lead Owner</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="hidden lg:table-cell">KW Req.</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -90,23 +91,18 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                 <TableCell>
                   <div className="font-medium">{lead.customerName}</div>
                   <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
-                   <div className="text-sm text-muted-foreground md:hidden">
-                    {lead.structureTeamMemberName ? (
-                      <><span className="font-medium">{lead.structureTeamMemberName}</span> <Badge variant="outline" className="ml-1">Structure</Badge></>
-                    ) : (
-                      <span className="font-medium">{lead.ownerName}</span>
-                    )}
-                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {lead.structureTeamMemberName ? (
                     <div>
-                      <span className="font-medium">{lead.structureTeamMemberName}</span> <Badge variant="outline" className="ml-1">Structure</Badge>
+                      <span className="font-medium">{lead.structureTeamMemberName}</span>
+                      <Badge variant="outline" className="ml-1">Structure</Badge>
                     </div>
                   ) : (
                     <span className="font-medium">{lead.ownerName}</span>
                   )}
                 </TableCell>
+                <TableCell className="hidden lg:table-cell">{lead.ownerName}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{lead.status}</Badge>
                 </TableCell>
@@ -159,7 +155,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={6} className="h-24 text-center">
                 No leads found.
               </TableCell>
             </TableRow>
