@@ -9,6 +9,7 @@ export interface AppUser {
   email: string | null;
   displayName: string | null;
   role: UserRole;
+  photoURL?: string | null;
 }
 
 export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Site Visit Done' | 'IN Design' | 'Quotation Send' | 'Closed' | 'Dropped';

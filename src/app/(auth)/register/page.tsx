@@ -88,6 +88,7 @@ export default function RegisterPage() {
         displayName: values.displayName,
         email: values.email,
         role: values.role,
+        photoURL: null,
       });
 
       router.push("/dashboard");

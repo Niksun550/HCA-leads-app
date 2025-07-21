@@ -78,14 +78,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <span>Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {user.role === 'Admin' && (
-                <SidebarMenuItem>
-                    <SidebarMenuButton href="/settings" isActive={pathname.startsWith('/settings')} tooltip="Settings">
-                        <Settings />
-                        <span>Settings</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+              <SidebarMenuItem>
+                  <SidebarMenuButton href="/settings" isActive={pathname.startsWith('/settings')} tooltip="Settings">
+                      <Settings />
+                      <span>Settings</span>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
           </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4">
@@ -94,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" className="w-full justify-start h-auto p-2 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:aspect-square">
                   <div className="flex items-center gap-3 w-full">
                   <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://placehold.co/40x40.png`} data-ai-hint="user avatar" />
+                      <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png`} data-ai-hint="user avatar" />
                       <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
                   </Avatar>
                   <div className="text-left group-data-[collapsible=icon]:hidden">
@@ -115,6 +113,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+               <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName,
               role: userData.role || 'Viewer', // Default to 'Viewer' if role not set
+              photoURL: firebaseUser.photoURL || userData.photoURL,
             });
           } else {
             console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);
@@ -54,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
               role: 'Sales Rep', // Fallback role
+              photoURL: firebaseUser.photoURL,
             });
           }
         } catch (error) {
