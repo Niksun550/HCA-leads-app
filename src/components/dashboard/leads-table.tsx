@@ -101,7 +101,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                 <TableCell className="hidden md:table-cell">
                   {lead.structureTeamMemberName ? (
                     <div>
-                      <span className="font-medium">{lead.structureTeamMemberName}</span> <Badge variant="outline">Structure</Badge>
+                      <span className="font-medium">{lead.structureTeamMemberName}</span> <Badge variant="outline" className="ml-1">Structure</Badge>
                     </div>
                   ) : (
                     <span className="font-medium">{lead.ownerName}</span>
