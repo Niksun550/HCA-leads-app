@@ -18,6 +18,8 @@ const REVENUE_PER_KW = 3000;
 
 export function ForecastingDashboard({ leads }: ForecastingDashboardProps) {
   const forecastData = useMemo(() => {
+    if (!leads) return { winRate: 0, projectedRevenue: 0, averageDealCycle: 0 };
+
     const closedLeads = leads.filter(lead => lead.status === 'Closed');
     const droppedLeads = leads.filter(lead => lead.status === 'Dropped');
     const openLeads = leads.filter(lead => lead.status !== 'Closed' && lead.status !== 'Dropped');
@@ -47,20 +49,25 @@ export function ForecastingDashboard({ leads }: ForecastingDashboardProps) {
   }, [leads]);
   
   const monthlyData = useMemo(() => {
+    if (!leads) return [];
+    
     const monthlySummary: { [key: string]: { created: number, closed: number } } = {};
     
     leads.forEach(lead => {
-      const month = format(lead.createdAt.toDate(), 'yyyy-MM');
-      if (!monthlySummary[month]) {
-        monthlySummary[month] = { created: 0, closed: 0 };
-      }
-      monthlySummary[month].created += lead.kwRequirement || 0;
-      if (lead.status === 'Closed' && lead.closedAt) {
-          const closedMonth = format(lead.closedAt.toDate(), 'yyyy-MM');
-           if (!monthlySummary[closedMonth]) {
-            monthlySummary[closedMonth] = { created: 0, closed: 0 };
-          }
-          monthlySummary[closedMonth].closed += lead.kwRequirement || 0;
+      if (lead.createdAt) {
+        const month = format(lead.createdAt.toDate(), 'yyyy-MM');
+        if (!monthlySummary[month]) {
+          monthlySummary[month] = { created: 0, closed: 0 };
+        }
+        monthlySummary[month].created += lead.kwRequirement || 0;
+
+        if (lead.status === 'Closed' && lead.closedAt) {
+            const closedMonth = format(lead.closedAt.toDate(), 'yyyy-MM');
+             if (!monthlySummary[closedMonth]) {
+              monthlySummary[closedMonth] = { created: 0, closed: 0 };
+            }
+            monthlySummary[closedMonth].closed += lead.kwRequirement || 0;
+        }
       }
     });
 
@@ -70,11 +77,17 @@ export function ForecastingDashboard({ leads }: ForecastingDashboardProps) {
 
   }, [leads]);
 
+  const pipelineSize = useMemo(() => {
+    if (!leads) return 0;
+    return leads.reduce((acc, lead) => acc + (lead.kwRequirement || 0), 0);
+  }, [leads]);
+
+
   const stats = [
     { title: 'Projected Revenue', value: `$${forecastData.projectedRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-500', description: "From open leads" },
     { title: 'Win Rate', value: `${forecastData.winRate.toFixed(1)}%`, icon: Target, color: 'text-primary', description: "Of all resolved leads" },
     { title: 'Avg. Deal Cycle', value: `${forecastData.averageDealCycle} days`, icon: Clock, color: 'text-accent', description: "From creation to close" },
-    { title: 'Pipeline Size (KW)', value: `${leads.reduce((acc, lead) => acc + (lead.kwRequirement || 0), 0).toLocaleString()} KW`, icon: TrendingUp, color: 'text-yellow-500', description: "Total KW in pipeline" },
+    { title: 'Pipeline Size (KW)', value: `${pipelineSize.toLocaleString()} KW`, icon: TrendingUp, color: 'text-yellow-500', description: "Total KW in pipeline" },
   ];
 
   return (

@@ -50,7 +50,7 @@ export interface Lead {
     latitude: number;
     longitude: number;
   } | null;
-  kwRequirement: number;
+  kwRequirement?: number;
   meterType: MeterType;
   propertyType: PropertyType;
   visitDates: Timestamp[];
