@@ -214,6 +214,11 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         structureTeamMemberName: structureTeamMember?.displayName || null,
       };
 
+      if (values.status === 'Quotation Send') {
+        data.structureTeamMemberId = null;
+        data.structureTeamMemberName = null;
+      }
+
       if (values.status === 'Closed' && lead?.status !== 'Closed') {
         data.closedAt = Timestamp.now();
       } else if (values.status !== 'Closed') {
