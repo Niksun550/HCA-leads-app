@@ -91,7 +91,11 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                   <div className="font-medium">{lead.customerName}</div>
                   <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
                    <div className="text-sm text-muted-foreground md:hidden">
-                    {lead.structureTeamMemberName ? `${lead.structureTeamMemberName} (Structure)` : lead.ownerName}
+                    {lead.structureTeamMemberName ? (
+                      <>{lead.structureTeamMemberName} <Badge variant="outline" className="ml-1">Structure</Badge></>
+                    ) : (
+                      lead.ownerName
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
