@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { leadStatuses } from '@/types';
+import { leadStatuses, structureLeadStatuses } from '@/types';
 
 export default function DashboardPage() {
   const { user, isInitialized } = useAuth();
@@ -32,11 +32,24 @@ export default function DashboardPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+  const availableStatuses = useMemo(() => {
+    return user?.role === 'Structure' ? structureLeadStatuses : leadStatuses;
+  }, [user]);
+
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>(() => {
     const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
-    leadStatuses.forEach(status => initialFilters[status] = true);
+    const statusesToUse = user?.role === 'Structure' ? structureLeadStatuses : leadStatuses;
+    statusesToUse.forEach(status => initialFilters[status] = true);
     return initialFilters as Record<LeadStatus, boolean>;
   });
+  
+  useEffect(() => {
+    if (!user) return;
+    const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
+    availableStatuses.forEach(status => initialFilters[status] = true);
+    setStatusFilters(initialFilters as Record<LeadStatus, boolean>);
+  }, [availableStatuses, user]);
+
 
   useEffect(() => {
     if (!isInitialized || !user) {
@@ -158,7 +171,7 @@ export default function DashboardPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {leadStatuses.map((status) => (
+              {availableStatuses.map((status) => (
                 <DropdownMenuCheckboxItem
                   key={status}
                   checked={statusFilters[status]}
