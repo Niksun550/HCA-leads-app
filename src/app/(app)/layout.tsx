@@ -31,7 +31,7 @@ import { LayoutDashboard, LogOut, Sun, ChevronDown, Settings, MessageSquare } fr
 import { LoaderCircle } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isInitialized, isFirebaseConfigured } = useAuth();
+  const { user, isInitialized } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -98,12 +98,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Button variant="ghost" className="w-full justify-start h-auto p-2 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:aspect-square">
                   <div className="flex items-center gap-3 w-full">
                   <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png`} data-ai-hint="user avatar" />
-                      <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
+                      <AvatarImage src={user.photoURL || undefined} data-ai-hint="user avatar" />
+                      <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
                   </Avatar>
                   <div className="text-left group-data-[collapsible=icon]:hidden">
-                      <p className="font-semibold text-sm">{user?.displayName}</p>
-                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      <p className="font-semibold text-sm">{user.displayName}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   <ChevronDown className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden" />
                   </div>
@@ -112,9 +112,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.displayName}</p>
+                  <p className="text-sm font-medium leading-none">{user.displayName}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
+                      {user.email}
                   </p>
                   </div>
               </DropdownMenuLabel>
