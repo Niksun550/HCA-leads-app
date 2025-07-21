@@ -559,12 +559,14 @@ const SidebarMenuButton = React.forwardRef<
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : 'button';
+    const Comp = asChild ? Slot : href ? Link : "button"
     const { isMobile, state } = useSidebar()
 
     const buttonContent = (
+      // @ts-expect-error - This is a valid way to use asChild
       <Comp
         ref={ref}
+        href={href}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
@@ -572,32 +574,20 @@ const SidebarMenuButton = React.forwardRef<
         {...props}
       />
     )
-    
-    const button = href ? <Link href={href}>{buttonContent}</Link> : buttonContent;
 
     if (!tooltip) {
-      return href ? <Link href={href} ref={ref as React.Ref<HTMLAnchorElement>} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} /> : (
-        <button ref={ref} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props} />
-      );
+      return buttonContent
     }
-    
+
     if (typeof tooltip === "string") {
       tooltip = {
         children: tooltip,
       }
     }
 
-    const triggerButton = href ? (
-      <Link href={href} ref={ref as React.Ref<HTMLAnchorElement>} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>} />
-    ) : (
-      <button ref={ref} data-sidebar="menu-button" data-size={size} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant, size }), className)} {...props} />
-    )
-
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          {triggerButton}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
