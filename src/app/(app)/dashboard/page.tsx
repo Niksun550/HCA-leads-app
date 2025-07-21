@@ -7,7 +7,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, FileSpreadsheet } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
@@ -37,7 +37,8 @@ export default function DashboardPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   const availableStatuses = useMemo(() => {
-    return user?.role === 'Structure' ? structureLeadStatuses : leadStatuses;
+    if (!user) return [];
+    return user.role === 'Structure' ? structureLeadStatuses : leadStatuses;
   }, [user]);
 
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>(() => {
@@ -77,7 +78,7 @@ export default function DashboardPage() {
         setAllUsers(usersData);
       } catch (error) {
         console.error("Error fetching users:", error);
-        setAllUsers([user]); // Fallback to current user
+        setAllUsers(user ? [user] : []); // Fallback to current user if available
       }
 
       let leadsQuery;
@@ -154,28 +155,10 @@ export default function DashboardPage() {
   };
 
 
-  if (!isInitialized || loading) {
+  if (!isInitialized || loading || !user) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
-           <div className="md:col-span-3">
-             <Skeleton className="h-80" />
-           </div>
-           <div className="md:col-span-2">
-             <Skeleton className="h-80" />
-           </div>
-        </div>
-        <Skeleton className="h-96" />
+       <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
+        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
@@ -184,8 +167,8 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">{user?.role === 'Director' ? 'Director Dashboard' : 'Dashboard'}</h1>
-          <p className="text-muted-foreground">Welcome back, {user?.displayName}!</p>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">{user.role === 'Director' ? 'Director Dashboard' : 'Dashboard'}</h1>
+          <p className="text-muted-foreground">Welcome back, {user.displayName}!</p>
         </div>
         <div className="flex items-center gap-2">
            <DropdownMenu>
@@ -201,7 +184,7 @@ export default function DashboardPage() {
               {availableStatuses.map((status) => (
                 <DropdownMenuCheckboxItem
                   key={status}
-                  checked={statusFilters[status]}
+                  checked={statusFilters[status] ?? false}
                   onCheckedChange={(checked) => setStatusFilters(prev => ({...prev, [status]: !!checked}))}
                 >
                   {status}
@@ -213,7 +196,7 @@ export default function DashboardPage() {
              <FileSpreadsheet className="mr-2 h-4 w-4" />
              Export
           </Button>
-          {user?.role !== 'Viewer' && user?.role !== 'Structure' && user?.role !== 'Director' && (
+          {user.role !== 'Viewer' && user.role !== 'Structure' && user.role !== 'Director' && (
             <Button onClick={handleAddLead}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Lead
@@ -222,7 +205,7 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      {user?.role === 'Director' ? (
+      {user.role === 'Director' ? (
         <ForecastingDashboard leads={filteredLeads} />
       ) : (
         <>
