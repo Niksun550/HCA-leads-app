@@ -27,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, LogOut, Sun, ChevronDown, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, Sun, ChevronDown, Settings, MessageSquare } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -76,6 +76,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton href="/dashboard" isActive={pathname.startsWith('/dashboard')} tooltip="Dashboard">
                     <LayoutDashboard />
                     <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton href="/communication" isActive={pathname.startsWith('/communication')} tooltip="Communication">
+                    <MessageSquare />
+                    <span>Communication</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

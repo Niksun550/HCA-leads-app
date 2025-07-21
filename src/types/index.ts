@@ -65,3 +65,25 @@ export interface Lead {
   structureTeamMemberId?: string | null;
   structureTeamMemberName?: string | null;
 }
+
+export interface Message {
+    id: string;
+    text: string;
+    senderId: string;
+    senderName: string;
+    timestamp: Timestamp;
+}
+
+export interface Conversation {
+    id: string;
+    participants: string[];
+    participantNames: { [uid: string]: string };
+    participantPhotos: { [uid: string]: string | null };
+    lastMessage?: {
+        text: string;
+        senderId: string;
+        timestamp: Timestamp;
+    };
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+}
