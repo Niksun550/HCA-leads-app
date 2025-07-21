@@ -77,7 +77,7 @@ export default function DashboardPage() {
       }
 
       let leadsQuery;
-      if (user.role === 'Admin' || user.role === 'Viewer') {
+      if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
           leadsQuery = query(collection(db, 'leads'));
       } else if (user.role === 'Sales Rep') {
           leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
@@ -182,7 +182,7 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {user?.role !== 'Viewer' && user?.role !== 'Structure' && (
+          {user?.role !== 'Viewer' && user?.role !== 'Structure' && user?.role !== 'Director' && (
             <Button onClick={handleAddLead}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Lead

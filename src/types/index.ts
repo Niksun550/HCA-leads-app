@@ -1,8 +1,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer' | 'Structure';
-export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer', 'Structure'];
+export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer' | 'Structure' | 'Director';
+export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer', 'Structure', 'Director'];
 
 export interface AppUser {
   uid: string;
