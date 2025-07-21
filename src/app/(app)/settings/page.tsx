@@ -176,7 +176,7 @@ const AdminSettings = () => {
                             <Select
                                 value={u.role}
                                 onValueChange={(newRole: UserRole) => handleRoleChange(u.uid, newRole)}
-                                disabled={user.uid === u.uid} // Admin cannot change their own role
+                                disabled={user?.uid === u.uid} // Admin cannot change their own role
                             >
                                 <SelectTrigger>
                                 <SelectValue />
@@ -390,7 +390,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+    <div className="py-4 space-y-8">
       <header>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage your account and application settings.</p>

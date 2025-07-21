@@ -59,7 +59,7 @@ export default function CommunicationPage() {
 
   if (!isInitialized || loading) {
     return (
-       <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
+       <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -68,7 +68,7 @@ export default function CommunicationPage() {
   const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.16))] flex border-t">
+    <div className="h-[calc(100vh-theme(spacing.20))] flex border rounded-lg bg-card shadow-sm mt-4">
       <aside className="w-1/3 min-w-[280px] max-w-[350px] border-r">
         <ConversationList
           conversations={conversations}

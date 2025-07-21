@@ -164,7 +164,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+    <div className="py-4 space-y-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">{user.role === 'Director' ? 'Director Dashboard' : 'Dashboard'}</h1>
