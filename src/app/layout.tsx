@@ -3,6 +3,7 @@ import { Poppins, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
+import { Toaster } from '@/components/ui/toaster';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className={cn('font-body antialiased', poppins.variable, ptSans.variable)}>
         <AuthProvider>
           {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
