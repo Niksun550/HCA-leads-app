@@ -4,11 +4,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getFirebaseServices } from "@/lib/firebase";
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import type { Message, Conversation, AppUser } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, UserPlus } from "lucide-react";
+import { Send, Smile, UserPlus, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -72,14 +72,14 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
     });
 
     const convoRef = doc(db, "conversations", conversation.id);
-    await setDoc(convoRef, {
+    await updateDoc(convoRef, {
       lastMessage: {
         text: newMessage,
         senderId: user.uid,
         timestamp: serverTimestamp(),
       },
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    });
 
     setNewMessage("");
   };
@@ -108,6 +108,7 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
             },
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
+            lastMessage: null,
         });
         onConversationCreated(convoId);
     }
@@ -130,7 +131,7 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
   };
 
   const otherParticipant = getOtherParticipant();
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('');
+  const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('') || '';
 
   return (
     <div className="flex flex-col h-full bg-card">
@@ -221,8 +222,3 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
     </div>
   );
 }
-
-// Dummy component until MessageSquare is available
-const MessageSquare = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-);

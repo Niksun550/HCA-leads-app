@@ -4,27 +4,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow users to manage their own user document and read others' public info
+    // Allow users to read and update their own user document
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
     }
 
-    // Leads can be read and written by authenticated users.
-    // In a production app, you would lock this down further based on user roles.
+    // Allow admins to read all user documents
+    match /users/{userId} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Allow creating new users (for registration)
+    match /users/{userId} {
+      allow create: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read/write leads
     match /leads/{leadId} {
       allow read, write: if request.auth != null;
     }
 
-    // Users can read/write conversations they are a part of.
+    // Allow authenticated users to participate in conversations
     match /conversations/{conversationId} {
-      allow read, write: if request.auth != null && request.auth.uid in resource.data.participants;
-
-      // Messages can be read/written by participants of the conversation.
-      match /messages/{messageId} {
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
-      }
+      allow read, create, update: if request.auth.uid in resource.data.participants;
+    }
+    
+    // Allow authenticated users to send and read messages in conversations they are part of
+    match /conversations/{conversationId}/messages/{messageId} {
+        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
     }
   }
 }
