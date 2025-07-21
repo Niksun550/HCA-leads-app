@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, LogOut, Sun, Settings, MessageSquare } from "lucide-react";
+import { LogOut, Sun, Settings } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ const NavLink = ({ href, children, isActive }: { href: string; children: React.R
     href={href}
     className={cn(
       "transition-colors hover:text-foreground/80",
-      isActive ? "text-foreground" : "text-foreground/60"
+      isActive ? "text-foreground font-semibold" : "text-foreground/60"
     )}
   >
     {children}
