@@ -14,6 +14,7 @@ import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -157,7 +158,7 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">{user?.role === 'Director' ? 'Director Dashboard' : 'Dashboard'}</h1>
           <p className="text-muted-foreground">Welcome back, {user?.displayName}!</p>
         </div>
         <div className="flex items-center gap-2">
@@ -190,18 +191,24 @@ export default function DashboardPage() {
           )}
         </div>
       </header>
-
-      <StatCards leads={filteredLeads} />
-
-      <div className="grid gap-8 md:grid-cols-5">
-        <div className="md:col-span-3">
-          <LeadsChart leads={filteredLeads} />
-        </div>
-        <div className="md:col-span-2">
-          <LeadsMap leads={filteredLeads} />
-        </div>
-      </div>
       
+      {user?.role === 'Director' ? (
+        <ForecastingDashboard leads={filteredLeads} />
+      ) : (
+        <>
+          <StatCards leads={filteredLeads} />
+
+          <div className="grid gap-8 md:grid-cols-5">
+            <div className="md:col-span-3">
+              <LeadsChart leads={filteredLeads} />
+            </div>
+            <div className="md:col-span-2">
+              <LeadsMap leads={filteredLeads} />
+            </div>
+          </div>
+        </>
+      )}
+
       <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
 
       <LeadForm
