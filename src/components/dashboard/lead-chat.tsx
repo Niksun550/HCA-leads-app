@@ -76,9 +76,12 @@ export function LeadChat({ messages = [], onSendMessage, users, isSubmitting }: 
 
   return (
     <div className="flex flex-col h-full bg-card">
-        <div className="p-4 border-b flex items-center justify-between">
-            <h3 className="font-semibold">Lead Conversation</h3>
-            <Button variant="outline" size="sm" onClick={handleSummarize} disabled={isSummarizing || messages.length === 0}>
+        <div className="p-4 border-b flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold">Lead Conversation</h3>
+              <p className="text-sm text-muted-foreground">Internal chat for your team.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleSummarize} disabled={isSummarizing || messages.length === 0} className="shrink-0">
                 {isSummarizing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 Summarize
             </Button>
