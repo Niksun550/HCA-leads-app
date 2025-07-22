@@ -48,26 +48,31 @@ export default function CommunicationPage() {
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
-      const oldConversations = conversations;
-      const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
-      incomingConvs.sort((a,b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+      setConversations(prevConvs => {
+        const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+        
+        // Handle notifications
+        if (prevConvs.length > 0) { // Only notify after initial load
+            incomingConvs.forEach(newConv => {
+                const oldConv = prevConvs.find(c => c.id === newConv.id);
+                const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
 
-      if (oldConversations.length > 0) {
-        incomingConvs.forEach(newConv => {
-            const oldConv = oldConversations.find(c => c.id === newConv.id);
-            // If it's a new conversation or the last message is new, and not from the current user
-            if ((!oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id)) && newConv.lastMessage?.authorId !== user.uid) {
-                 const otherParticipantId = newConv.participants.find(p => p !== user.uid);
-                 const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
-                 toast({
-                     title: `New message from ${senderName}`,
-                     description: newConv.lastMessage?.text,
-                 });
-            }
-        });
-      }
+                if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
+                    const otherParticipantId = newConv.participants.find(p => p !== user.uid);
+                    const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
+                    toast({
+                        title: `New message from ${senderName}`,
+                        description: newConv.lastMessage?.text,
+                    });
+                }
+            });
+        }
+        
+        // Safe sorting
+        incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+        return incomingConvs;
+      });
 
-      setConversations(incomingConvs);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching conversations:", error);
@@ -75,7 +80,7 @@ export default function CommunicationPage() {
     });
 
     return unsubscribeConversations;
-  }, [user, toast, conversations]);
+  }, [user, toast]);
 
 
   useEffect(() => {
