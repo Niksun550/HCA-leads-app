@@ -17,21 +17,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Sun, Settings } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, MessageCircle } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const NavLink = ({ href, children, isActive }: { href: string; children: React.ReactNode; isActive: boolean }) => (
   <Link
     href={href}
     className={cn(
-      "transition-colors hover:text-foreground/80",
-      isActive ? "text-foreground font-semibold" : "text-foreground/60"
+      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+      isActive && "bg-muted text-primary"
     )}
   >
     {children}
   </Link>
 );
+
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
@@ -65,51 +72,68 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-muted/40">
-      <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <Sun className="h-6 w-6 text-primary" />
-          <span className="font-headline text-lg">SolarLeads</span>
-        </Link>
-        <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 mx-auto">
-          <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')}>Dashboard</NavLink>
-          <NavLink href="/communication" isActive={pathname.startsWith('/communication')}>Communication</NavLink>
-          <NavLink href="/settings" isActive={pathname.startsWith('/settings')}>Settings</NavLink>
-        </nav>
-        <div className="flex items-center gap-4 ml-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.photoURL || undefined} data-ai-hint="user avatar" />
-                  <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-      <main className="flex-1 p-4 sm:px-6 sm:py-0 md:gap-8">
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+        <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
+            <div className="flex h-16 items-center border-b px-6">
+                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+                    <Sun className="h-6 w-6 text-primary" />
+                    <span className="font-headline text-lg">SolarLeads</span>
+                </Link>
+            </div>
+            <nav className="flex flex-col gap-2 p-4">
+                 <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')}>
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
+                </NavLink>
+                <NavLink href="/communication" isActive={pathname.startsWith('/communication')}>
+                    <MessageCircle className="h-5 w-5" />
+                    Communication
+                </NavLink>
+                <NavLink href="/settings" isActive={pathname.startsWith('/settings')}>
+                    <Settings className="h-5 w-5" />
+                    Settings
+                </NavLink>
+            </nav>
+            <div className="mt-auto p-4">
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={user.photoURL || undefined} data-ai-hint="user avatar" />
+                                <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col items-start text-left">
+                                <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                <p className="text-xs leading-none text-muted-foreground">
+                                    {user.email}
+                                </p>
+                            </div>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                        <DropdownMenuLabel className="font-normal">
+                            <div className="flex flex-col space-y-1">
+                                <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                <p className="text-xs leading-none text-muted-foreground">
+                                    {user.email}
+                                </p>
+                            </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Settings</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Log out</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </aside>
+      <main className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
         {children}
       </main>
     </div>
