@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -129,11 +129,6 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
@@ -148,7 +143,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
   const router = useRouter();
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     if (isInitialized && !user) {
@@ -179,7 +174,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
-               <SheetHeader>
+               <SheetHeader className="p-4 border-b">
                  <SheetTitle>Menu</SheetTitle>
                </SheetHeader>
                <SidebarContent onLinkClick={() => setIsSheetOpen(false)} />
