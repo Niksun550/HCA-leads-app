@@ -75,7 +75,7 @@ export function UserList({
             </div>
           )}
           <ScrollArea className="h-full">
-            <TabsContent value="conversations" className="m-0">
+            <TabsContent value="conversations" className="m-0 p-2">
               {filteredConversations.map((conv) => {
                 if (!user) return null;
                 const otherParticipantId = conv.participants.find(p => p !== user.uid);
@@ -89,7 +89,7 @@ export function UserList({
                     key={conv.id}
                     onClick={() => onSelectConversation(conv)}
                     className={cn(
-                      "flex items-center gap-3 p-3 m-2 rounded-lg cursor-pointer transition-colors",
+                      "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
                       selectedConversationId === conv.id ? "bg-muted" : "hover:bg-muted/50"
                     )}
                   >
@@ -118,12 +118,12 @@ export function UserList({
                 <p className="p-4 text-center text-sm text-muted-foreground">No conversations yet.</p>
               )}
             </TabsContent>
-            <TabsContent value="users" className="m-0">
+            <TabsContent value="users" className="m-0 p-2">
               {filteredUsers.map((u) => (
                 <div
                   key={u.uid}
                   onClick={() => onSelectUser(u)}
-                  className="flex items-center gap-3 p-3 m-2 rounded-lg cursor-pointer hover:bg-muted/50"
+                  className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-muted/50"
                 >
                   <Avatar>
                     <AvatarImage src={u.photoURL || undefined} data-ai-hint="user avatar" />
