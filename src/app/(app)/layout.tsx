@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -152,6 +152,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
+               <SheetHeader>
+                 <SheetTitle className="sr-only">Menu</SheetTitle>
+               </SheetHeader>
                <SidebarContent onLinkClick={() => setIsSheetOpen(false)} />
             </SheetContent>
           </Sheet>
