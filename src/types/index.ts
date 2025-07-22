@@ -49,7 +49,7 @@ export interface Message {
 }
 
 export interface Lead {
-  id: string;
+  id:string;
   customerName: string;
   mobileNumber: string;
   address: string;
@@ -82,4 +82,5 @@ export interface Conversation {
   participantPhotos: Record<string, string | null>;
   lastMessage: Message | null;
   updatedAt: Timestamp;
+  unreadCounts: Record<string, number>;
 }

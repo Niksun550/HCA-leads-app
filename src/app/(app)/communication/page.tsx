@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, Conversation } from '@/types';
@@ -123,6 +123,10 @@ export default function CommunicationPage() {
                 },
                 lastMessage: null,
                 updatedAt: Timestamp.now(),
+                unreadCounts: {
+                    [user.uid]: 0,
+                    [selectedUser.uid]: 0,
+                },
             };
             await setDoc(conversationRef, newConversation);
             const createdConv = { id: conversationRef.id, ...newConversation } as Conversation;
@@ -140,8 +144,16 @@ export default function CommunicationPage() {
     }
   };
 
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = async (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    if (user && conversation.unreadCounts[user.uid] > 0) {
+      const { db } = getFirebaseServices();
+      if (!db) return;
+      const conversationRef = doc(db, 'conversations', conversation.id);
+      await updateDoc(conversationRef, {
+        [`unreadCounts.${user.uid}`]: 0
+      });
+    }
   };
 
   const getLayout = () => {

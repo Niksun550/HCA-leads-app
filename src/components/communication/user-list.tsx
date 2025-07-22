@@ -12,6 +12,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { LoaderCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface UserListProps {
   users: AppUser[];
@@ -81,6 +82,7 @@ export function UserList({
                 if (!otherParticipantId) return null;
                 const name = conv.participantNames[otherParticipantId];
                 const photo = conv.participantPhotos[otherParticipantId];
+                const unreadCount = conv.unreadCounts?.[user.uid] || 0;
                 
                 return (
                   <div
@@ -96,14 +98,19 @@ export function UserList({
                       <AvatarFallback>{getInitials(name)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 truncate">
-                      <p className="font-semibold truncate">{name}</p>
-                      <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || "No messages yet"}</p>
+                      <p className={cn("font-semibold truncate", unreadCount > 0 && "font-bold")}>{name}</p>
+                      <p className={cn("text-sm text-muted-foreground truncate", unreadCount > 0 && "text-foreground")}>{conv.lastMessage?.text || "No messages yet"}</p>
                     </div>
-                     {conv.lastMessage && conv.updatedAt?.toDate && (
-                       <p className="text-xs text-muted-foreground self-start shrink-0">
+                    <div className="flex flex-col items-end gap-1 self-start">
+                     {conv.updatedAt?.toDate && (
+                       <p className="text-xs text-muted-foreground shrink-0">
                           {formatDistanceToNowStrict(conv.updatedAt.toDate())}
                       </p>
                      )}
+                     {unreadCount > 0 && (
+                        <Badge className="h-5 w-5 p-0 flex items-center justify-center text-xs">{unreadCount}</Badge>
+                     )}
+                    </div>
                   </div>
                 );
               })}

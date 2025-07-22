@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getFirebaseServices } from "@/lib/firebase";
-import { collection, doc, addDoc, onSnapshot, query, orderBy, Timestamp, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, addDoc, onSnapshot, query, orderBy, Timestamp, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
 import type { AppUser, Conversation, Message } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -78,6 +78,7 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     if (!otherParticipantId) return { name: 'Group Chat', photo: null };
 
     return {
+        id: otherParticipantId,
         name: conversation.participantNames[otherParticipantId],
         photo: conversation.participantPhotos[otherParticipantId]
     }
@@ -87,7 +88,7 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === "" || !user || !activeConversationId) return;
+    if (newMessage.trim() === "" || !user || !activeConversationId || !participantInfo) return;
 
     setIsSending(true);
     const { db } = getFirebaseServices();
@@ -110,10 +111,14 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         const newMessageRef = doc(messagesRef, messageId);
         
         batch.set(newMessageRef, newMessageData);
-        batch.update(conversationRef, {
+        
+        const updatePayload: any = {
             lastMessage: newMessageData,
-            updatedAt: serverTimestamp()
-        });
+            updatedAt: serverTimestamp(),
+            [`unreadCounts.${participantInfo.id}`]: increment(1),
+        };
+
+        batch.update(conversationRef, updatePayload);
         
         await batch.commit();
 

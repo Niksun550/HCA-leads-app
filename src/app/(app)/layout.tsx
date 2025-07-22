@@ -1,14 +1,17 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseServices } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from "@/hooks/use-auth";
+import type { Conversation } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,16 +25,21 @@ import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare } from "luc
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NavLink = ({ href, children, isActive, onClick }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void }) => (
+const NavLink = ({ href, children, isActive, onClick, unreadCount }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void, unreadCount?: number }) => (
   <Link
     href={href}
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+      "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
       isActive && "bg-muted text-primary"
     )}
   >
-    {children}
+    <div className="flex items-center gap-3">
+        {children}
+    </div>
+    {unreadCount !== undefined && unreadCount > 0 && (
+        <Badge className="h-6 w-6 shrink-0 justify-center rounded-full p-0">{unreadCount}</Badge>
+    )}
   </Link>
 );
 
@@ -39,6 +47,25 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     const pathname = usePathname();
     const { user } = useAuth();
     const router = useRouter();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+        const { db } = getFirebaseServices();
+        if (!db) return;
+
+        const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let totalUnread = 0;
+            snapshot.forEach(doc => {
+                const conv = doc.data() as Omit<Conversation, 'id'>;
+                totalUnread += conv.unreadCounts?.[user.uid] || 0;
+            });
+            setUnreadCount(totalUnread);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     const handleLogout = async () => {
         const { auth } = getFirebaseServices();
@@ -67,7 +94,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
               </NavLink>
-               <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
+               <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick} unreadCount={unreadCount}>
                 <MessageSquare className="h-5 w-5" />
                 Communication
               </NavLink>
@@ -153,7 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="sm:max-w-xs flex flex-col p-0">
                <SheetHeader>
-                 <SheetTitle className="sr-only">Menu</SheetTitle>
+                 <SheetTitle>Menu</SheetTitle>
                </SheetHeader>
                <SidebarContent onLinkClick={() => setIsSheetOpen(false)} />
             </SheetContent>
