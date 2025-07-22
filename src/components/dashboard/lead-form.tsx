@@ -5,11 +5,11 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { addDoc, collection, doc, setDoc, Timestamp } from "firebase/firestore";
+import { addDoc, collection, doc, setDoc, Timestamp, updateDoc, arrayUnion } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Lead, AppUser, Remark, Attachment } from "@/types";
+import type { Lead, AppUser, Remark, Attachment, Message } from "@/types";
 import { leadStatuses, leadSources, meterTypes, propertyTypes, structureLeadStatuses } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -41,11 +41,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { LeadChat } from "./lead-chat";
 
 interface LeadFormProps {
   isOpen: boolean;
@@ -256,14 +258,16 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         meterType: values.meterType,
         propertyType: values.propertyType,
         ownerId: values.ownerId,
-        ownerName: owner.displayName,
+        ownerName: owner.displayName || '',
         leadBy: values.leadBy,
         status: values.status,
         location: values.location,
         visitDates: values.visitDates.map(d => Timestamp.fromDate(d)),
         createdAt: lead ? lead.createdAt : Timestamp.now(),
+        updatedAt: Timestamp.now(),
         remarks: remarks,
         attachments: attachments,
+        messages: lead?.messages || [],
         closedAt: lead?.closedAt || null,
         structureTeamMemberId: values.structureTeamMemberId || null,
         structureTeamMemberName: structureTeamMember?.displayName || null,
@@ -284,13 +288,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         await setDoc(doc(db, "leads", lead.id), data, { merge: true });
         toast({ title: "Lead updated successfully!" });
       } else {
-        // For new leads, we need to re-upload attachments to the correct path if any were added
         const newLeadRef = doc(collection(db, "leads"));
-        if (attachments.length > 0) {
-            // This is a simplified approach. A more robust solution would handle re-uploading or moving files.
-            // For now, we will just save the data with potentially incorrect new lead paths.
-            // A better solution might be to upload files only after the lead is created.
-        }
         await setDoc(newLeadRef, { ...data, id: newLeadRef.id });
         toast({ title: "Lead added successfully!" });
       }
@@ -302,232 +300,288 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       setIsSubmitting(false);
     }
   };
+
+  const handleSendMessage = async (text: string) => {
+     if (!user || !lead) {
+      toast({ variant: "destructive", title: "Cannot send message" });
+      return;
+    }
+    const { db } = getFirebaseServices();
+    if (!db) {
+      toast({ variant: "destructive", title: "Submission Failed", description: "Firebase is not configured." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+        const newMessage: Message = {
+            id: uuidv4(),
+            text,
+            authorId: user.uid,
+            createdAt: Timestamp.now(),
+        };
+
+        const leadRef = doc(db, "leads", lead.id);
+        await updateDoc(leadRef, {
+            messages: arrayUnion(newMessage),
+            updatedAt: Timestamp.now(),
+        });
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Message Failed", description: error.message });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[800px] grid-rows-[auto_1fr] p-0 max-h-[90vh]">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="font-headline">{lead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
           <DialogDescription>
             {lead ? "Update the details for this lead." : "Fill in the details for the new lead."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField name="customerName" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer Name</FormLabel>
-                  <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField name="mobileNumber" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mobile Number</FormLabel>
-                  <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-            <FormField name="address" control={form.control} render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address</FormLabel>
-                <FormControl><Textarea {...field} disabled={isStructureForm} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-             <FormItem>
-                <FormLabel>Live Location</FormLabel>
-                 <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={handleLocation} disabled={isLocating || isStructureForm}>
-                        {isLocating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <LocateFixed className="mr-2 h-4 w-4" />}
-                        Get Current Location
-                    </Button>
-                    {form.watch("location") && (
-                        <p className="text-sm text-muted-foreground">
-                        Lat: {form.getValues("location.latitude")?.toFixed(4)}, Lng: {form.getValues("location.longitude")?.toFixed(4)}
-                        </p>
-                    )}
-                 </div>
-              </FormItem>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField name="kwRequirement" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>KW Requirement</FormLabel>
-                    <FormControl><Input type="number" {...field} disabled={isStructureForm} /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField name="meterType" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Meter</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{meterTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField name="propertyType" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{propertyTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField name="status" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>{availableStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField name="leadBy" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Lead Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{leadSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-            </div>
-             {user?.role === 'Admin' && (
-                <FormField name="ownerId" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Lead Owner</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-            )}
-            
-            {status === 'Structure Pending' && !isStructureForm && (
-              <FormField name="structureTeamMemberId" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign to Structure Team</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ''}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {structureTeamUsers.length > 0 ? (
-                        structureTeamUsers.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)
-                      ) : (
-                        <SelectItem value="-" disabled>No structure team members found</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+        <div className="grid md:grid-cols-2 overflow-hidden">
+            <div className="overflow-y-auto pr-2">
+                <Tabs defaultValue="details" className="p-6">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="attachments">Attachments</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="details">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} id="lead-form" className="space-y-4 pt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField name="customerName" control={form.control} render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Customer Name</FormLabel>
+                                    <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField name="mobileNumber" control={form.control} render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Mobile Number</FormLabel>
+                                    <FormControl><Input {...field} disabled={isStructureForm} /></FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )} />
+                                </div>
+                                <FormField name="address" control={form.control} render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Address</FormLabel>
+                                    <FormControl><Textarea {...field} disabled={isStructureForm} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )} />
+                                <FormItem>
+                                    <FormLabel>Live Location</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                        <Button type="button" variant="outline" onClick={handleLocation} disabled={isLocating || isStructureForm}>
+                                            {isLocating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <LocateFixed className="mr-2 h-4 w-4" />}
+                                            Get Current Location
+                                        </Button>
+                                        {form.watch("location") && (
+                                            <p className="text-sm text-muted-foreground">
+                                            Lat: {form.getValues("location.latitude")?.toFixed(4)}, Lng: {form.getValues("location.longitude")?.toFixed(4)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </FormItem>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormField name="kwRequirement" control={form.control} render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>KW Requirement</FormLabel>
+                                        <FormControl><Input type="number" {...field} disabled={isStructureForm} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField name="meterType" control={form.control} render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Meter</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>{meterTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField name="propertyType" control={form.control} render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Type</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>{propertyTypes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField name="status" control={form.control} render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>{availableStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField name="leadBy" control={form.control} render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Lead Source</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>{leadSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                {user?.role === 'Admin' && (
+                                    <FormField name="ownerId" control={form.control} render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Lead Owner</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isStructureForm}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>{users.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                )}
+                                
+                                {status === 'Structure Pending' && !isStructureForm && (
+                                <FormField name="structureTeamMemberId" control={form.control} render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Assign to Structure Team</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                        {structureTeamUsers.length > 0 ? (
+                                            structureTeamUsers.map(u => <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>)
+                                        ) : (
+                                            <SelectItem value="-" disabled>No structure team members found</SelectItem>
+                                        )}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )} />
+                                )}
 
-            <FormField name="visitDates" control={form.control} render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className={cn(status !== 'Visited' && "text-muted-foreground/50")}>Visit Dates</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={status !== 'Visited' || isStructureForm}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !field.value?.length && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      Add visit dates
+                                <FormField name="visitDates" control={form.control} render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel className={cn(status !== 'Visited' && "text-muted-foreground/50")}>Visit Dates</FormLabel>
+                                    <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={status !== 'Visited' || isStructureForm}
+                                        className={cn(
+                                            "justify-start text-left font-normal",
+                                            !field.value?.length && "text-muted-foreground"
+                                        )}
+                                        >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        Add visit dates
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                        mode="single"
+                                        onSelect={(date) => {
+                                            if (date && !field.value.some(d => d.getTime() === date.getTime())) {
+                                            field.onChange([...field.value, date]);
+                                            }
+                                        }}
+                                        disabled={(date) => field.value.some(d => d.getTime() === date.getTime())}
+                                        initialFocus
+                                        />
+                                    </PopoverContent>
+                                    </Popover>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {field.value.map((date, i) => (
+                                            <Badge key={i} className="flex items-center gap-1">
+                                                {format(date, 'PPP')}
+                                                <button type="button" disabled={status !== 'Visited' || isStructureForm} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
+                                                    <X className="h-3 w-3"/>
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                                )} />
+
+                                <FormField name="newRemark" control={form.control} render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Remark</FormLabel>
+                                    <FormControl><Textarea placeholder="Add a new remark about status changes or other updates..." {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )} />
+                            </form>
+                        </Form>
+                    </TabsContent>
+                     <TabsContent value="attachments">
+                         <div className="space-y-4 pt-4">
+                            <div className="flex items-center gap-2">
+                                <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" id="file-upload" disabled={uploadProgress !== null}/>
+                                <Button asChild type="button" variant="outline" disabled={uploadProgress !== null}>
+                                <label htmlFor="file-upload" className="cursor-pointer flex items-center">
+                                    <UploadCloud className="mr-2" /> Upload File
+                                </label>
+                                </Button>
+                            </div>
+                            {uploadProgress !== null && <Progress value={uploadProgress} className="w-full" />}
+
+                            {attachments.length > 0 && (
+                            <div className="space-y-2 rounded-md border p-2">
+                                {attachments.map((att, i) => (
+                                <div key={i} className="flex items-center justify-between gap-2 p-1 rounded-md hover:bg-muted">
+                                    <div className="flex items-center gap-2 truncate">
+                                    <FileIcon className="h-4 w-4 flex-shrink-0"/>
+                                    <span className="truncate text-sm">{att.name}</span>
+                                    </div>
+                                    <a href={att.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-7 w-7")}>
+                                    <Download className="h-4 w-4" />
+                                    </a>
+                                </div>
+                                ))}
+                            </div>
+                            )}
+                         </div>
+                    </TabsContent>
+                </Tabs>
+                <div className="p-6 pt-0 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+                    <Button type="submit" form="lead-form" disabled={isSubmitting || uploadProgress !== null}>
+                        {(isSubmitting || uploadProgress !== null) && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                        {lead ? "Save Changes" : "Create Lead"}
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      onSelect={(date) => {
-                        if (date && !field.value.some(d => d.getTime() === date.getTime())) {
-                          field.onChange([...field.value, date]);
-                        }
-                      }}
-                      disabled={(date) => field.value.some(d => d.getTime() === date.getTime())}
-                      initialFocus
+                </div>
+            </div>
+            <div className="md:border-l h-full">
+                {lead ? (
+                    <LeadChat 
+                        messages={lead.messages || []}
+                        onSendMessage={handleSendMessage}
+                        users={users}
+                        isSubmitting={isSubmitting}
                     />
-                  </PopoverContent>
-                </Popover>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {field.value.map((date, i) => (
-                        <Badge key={i} className="flex items-center gap-1">
-                            {format(date, 'PPP')}
-                            <button type="button" disabled={status !== 'Visited' || isStructureForm} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
-                                <X className="h-3 w-3"/>
-                            </button>
-                        </Badge>
-                    ))}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-             <FormField name="newRemark" control={form.control} render={({ field }) => (
-              <FormItem>
-                <FormLabel>Remark</FormLabel>
-                <FormControl><Textarea placeholder="Add a new remark about status changes or other updates..." {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            
-             <FormItem>
-              <FormLabel>Attachments</FormLabel>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                    <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" id="file-upload" disabled={uploadProgress !== null}/>
-                    <Button asChild type="button" variant="outline" disabled={uploadProgress !== null}>
-                       <label htmlFor="file-upload" className="cursor-pointer">
-                           <UploadCloud className="mr-2" /> Upload File
-                       </label>
-                    </Button>
-                </div>
-                {uploadProgress !== null && <Progress value={uploadProgress} className="w-full" />}
-
-                {attachments.length > 0 && (
-                  <div className="space-y-2 rounded-md border p-2">
-                    {attachments.map((att, i) => (
-                      <div key={i} className="flex items-center justify-between gap-2 p-1 rounded-md hover:bg-muted">
-                        <div className="flex items-center gap-2 truncate">
-                           <FileIcon className="h-4 w-4 flex-shrink-0"/>
-                           <span className="truncate text-sm">{att.name}</span>
-                        </div>
-                        <a href={att.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-7 w-7")}>
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-muted/50">
+                        <MessageSquare className="h-16 w-16 mb-4" />
+                        <p className="font-semibold">Conversation</p>
+                        <p className="text-sm text-center px-4">Save the lead to start the conversation.</p>
+                    </div>
                 )}
-              </div>
-            </FormItem>
-
-
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting || uploadProgress !== null}>
-                {(isSubmitting || uploadProgress !== null) && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                {lead ? "Save Changes" : "Create Lead"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

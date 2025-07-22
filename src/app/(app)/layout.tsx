@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, MessageCircle, Menu, PanelLeft } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,27 +56,23 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
     return (
         <>
-            <div className="flex h-16 items-center border-b px-6">
+            <div className="flex h-16 shrink-0 items-center border-b px-6">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                 <Sun className="h-6 w-6 text-primary" />
                 <span className="font-headline text-lg">SolarLeads</span>
               </Link>
             </div>
-            <nav className="flex flex-col gap-2 p-4">
+            <nav className="flex-1 flex flex-col gap-2 p-4">
               <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')} onClick={onLinkClick}>
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
-              </NavLink>
-              <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
-                <MessageCircle className="h-5 w-5" />
-                Communication
               </NavLink>
               <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
                 <Settings className="h-5 w-5" />
                 Settings
               </NavLink>
             </nav>
-            <div className="mt-auto p-4">
+            <div className="mt-auto p-4 border-t">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="w-full justify-start gap-3 h-12">
@@ -118,7 +114,6 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     );
 };
 
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
   const router = useRouter();
@@ -129,7 +124,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [isInitialized, user, router]);
-
 
   if (!isInitialized || !user) {
       return (
@@ -145,7 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent />
       </aside>
       <div className="flex flex-col sm:pl-64 w-full">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button size="icon" variant="outline" className="sm:hidden">
