@@ -87,7 +87,6 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
   const handleCreateConversation = async () => {
     if (!selectedUser || !user || !db) return;
 
-    // Check if a conversation already exists
     const convoId = [user.uid, selectedUser.uid].sort().join('_');
     const convoRef = doc(db, "conversations", convoId);
     const convoSnap = await getDoc(convoRef);
@@ -99,12 +98,12 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
             id: convoId,
             participants: [user.uid, selectedUser.uid],
             participantNames: {
-                [user.uid]: user.displayName,
-                [selectedUser.uid]: selectedUser.displayName,
+                [user.uid]: user.displayName || user.email || 'User',
+                [selectedUser.uid]: selectedUser.displayName || selectedUser.email || 'User',
             },
             participantPhotos: {
-                [user.uid]: user.photoURL,
-                [selectedUser.uid]: selectedUser.photoURL,
+                [user.uid]: user.photoURL || null,
+                [selectedUser.uid]: selectedUser.photoURL || null,
             },
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
