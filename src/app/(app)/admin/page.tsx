@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, UserRole } from '@/types';
@@ -31,9 +31,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, MoreHorizontal, Trash2 } from 'lucide-react';
+
+// This would ideally be in a config file
+const DELETE_USER_FUNCTION_URL = `https://us-central1-${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net/deleteUser`;
 
 const AdminPage = () => {
     const { user, isInitialized } = useAuth();
@@ -41,6 +62,9 @@ const AdminPage = () => {
     const { toast } = useToast();
     const [users, setUsers] = useState<AppUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
     useEffect(() => {
         if (isInitialized) {
@@ -105,6 +129,57 @@ const AdminPage = () => {
         }
     };
     
+    const openDeleteConfirmation = (user: AppUser) => {
+      setUserToDelete(user);
+      setIsDeleteAlertOpen(true);
+    }
+    
+    const handleDeleteUser = async () => {
+      if (!userToDelete) return;
+
+      setIsDeleting(true);
+      try {
+        const idToken = await user?.getIdToken();
+        const response = await fetch(DELETE_USER_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ uid: userToDelete.uid }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Failed to delete user.');
+        }
+
+        // Also delete from firestore
+        const { db } = getFirebaseServices();
+        if(db) {
+            const userDocRef = doc(db, 'users', userToDelete.uid);
+            await deleteDoc(userDocRef);
+        }
+        
+        setUsers(prevUsers => prevUsers.filter(u => u.uid !== userToDelete.uid));
+        toast({
+          title: 'User Deleted',
+          description: `${userToDelete.displayName} has been permanently deleted.`,
+        });
+
+      } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error.message,
+        });
+      } finally {
+        setIsDeleting(false);
+        setIsDeleteAlertOpen(false);
+        setUserToDelete(null);
+      }
+    };
+    
     if (!isInitialized || loading || !user) {
         return (
             <div className="flex h-[calc(100vh_-_theme(spacing.16))] w-full items-center justify-center bg-background">
@@ -122,7 +197,7 @@ const AdminPage = () => {
             <Card>
                 <CardHeader>
                     <CardTitle>User Management</CardTitle>
-                    <CardDescription>Manage roles for all users in the system.</CardDescription>
+                    <CardDescription>Manage roles and permissions for all users in the system.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-lg border shadow-sm bg-card">
@@ -131,6 +206,7 @@ const AdminPage = () => {
                             <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead className="w-[200px]">Role</TableHead>
+                             <TableHead className="text-right w-[100px]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -158,6 +234,25 @@ const AdminPage = () => {
                                     </SelectContent>
                                 </Select>
                                 </TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={user?.uid === u.uid}>
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem 
+                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                onClick={() => openDeleteConfirmation(u)}
+                                                disabled={user?.uid === u.uid}
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
                             </TableRow>
                             ))}
                         </TableBody>
@@ -165,6 +260,29 @@ const AdminPage = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the user account
+                        for <span className="font-semibold">{userToDelete?.displayName}</span> and all associated data.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteUser}
+                        className="bg-destructive hover:bg-destructive/90"
+                        disabled={isDeleting}
+                    >
+                        {isDeleting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete User
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

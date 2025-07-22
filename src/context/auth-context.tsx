@@ -8,7 +8,7 @@ import { getFirebaseServices } from "@/lib/firebase";
 import type { AppUser } from "@/types";
 
 interface AuthContextType {
-  user: AppUser | null;
+  user: (AppUser & { getIdToken: () => Promise<string | null> }) | null;
   isInitialized: boolean;
   isFirebaseConfigured: boolean;
 }
@@ -20,7 +20,7 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
+  const [user, setUser] = useState<AuthContextType['user']>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
 
@@ -39,6 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
+          const getIdToken = () => firebaseUser.getIdToken();
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setUser({
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: firebaseUser.displayName || userData.displayName,
               role: userData.role || 'Viewer', // Default to 'Viewer' if role not set
               photoURL: firebaseUser.photoURL || userData.photoURL,
+              getIdToken,
             });
           } else {
             console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);
@@ -56,6 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: firebaseUser.displayName,
               role: 'Sales Rep', // Fallback role
               photoURL: firebaseUser.photoURL,
+              getIdToken,
             });
           }
         } catch (error) {
