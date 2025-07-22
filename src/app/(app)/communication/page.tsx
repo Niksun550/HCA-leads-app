@@ -49,11 +49,12 @@ export default function CommunicationPage() {
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
+      const currentConversations = conversations;
       const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
       
       if (!isInitialLoad) {
           incomingConvs.forEach(newConv => {
-              const oldConv = conversations.find(c => c.id === newConv.id);
+              const oldConv = currentConversations.find(c => c.id === newConv.id);
               const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
 
               if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
@@ -80,7 +81,7 @@ export default function CommunicationPage() {
     });
 
     return unsubscribeConversations;
-  }, [user, toast, selectedConversation?.id, isInitialLoad, conversations]);
+  }, [user, toast, selectedConversation?.id, isInitialLoad]);
 
   const handleSelectUser = async (selectedUser: AppUser) => {
     if (!user) return;
