@@ -10,14 +10,14 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import type { Message } from '@/types';
+import type { Message as OriginalMessage } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 
 const MessageSchema = z.object({
   id: z.string(),
   text: z.string(),
   authorId: z.string(),
-  createdAt: z.custom<Timestamp>()
+  createdAt: z.string().describe("The creation date of the message in ISO format."),
 });
 
 const SummarizeConversationInputSchema = z.array(MessageSchema);
@@ -40,7 +40,7 @@ const summarizeConversationFlow = ai.defineFlow(
       prompt: `You are an expert sales assistant. Your task is to summarize the following conversation about a sales lead. Provide a concise, bulleted summary of the key points, decisions, and action items.
       
       Conversation History:
-      ${messages.map(m => `User ${m.authorId} said: "${m.text}"`).join('\n')}
+      ${messages.map(m => `User ${m.authorId} at ${m.createdAt} said: "${m.text}"`).join('\n')}
       `,
       output: {
         schema: SummarizeConversationOutputSchema,

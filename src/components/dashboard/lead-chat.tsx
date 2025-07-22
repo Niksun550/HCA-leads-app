@@ -47,7 +47,11 @@ export function LeadChat({ messages = [], onSendMessage, users, isSubmitting }: 
     setIsSummarizing(true);
     setSummary(null);
     try {
-      const result = await summarizeConversation(messages);
+      const serializableMessages = messages.map(msg => ({
+        ...msg,
+        createdAt: msg.createdAt.toDate().toISOString(),
+      }));
+      const result = await summarizeConversation(serializableMessages);
       setSummary(result.summary);
     } catch (error) {
       console.error("Error summarizing conversation:", error);
