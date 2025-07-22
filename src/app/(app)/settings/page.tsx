@@ -3,33 +3,15 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import type { AppUser, UserRole } from '@/types';
-import { userRoles } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile, sendPasswordResetEmail } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Card,
   CardContent,
@@ -56,149 +38,6 @@ import { LoaderCircle, Upload } from 'lucide-react';
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Name must be at least 2 characters."),
 });
-
-const AdminSettings = () => {
-    const { user } = useAuth();
-    const { toast } = useToast();
-    const [users, setUsers] = useState<AppUser[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchUsers = async () => {
-        setLoading(true);
-        const { db } = getFirebaseServices();
-        if (!db) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
-            setLoading(false);
-            return;
-        }
-
-        try {
-        const usersCollection = collection(db, 'users');
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
-        setUsers(usersData);
-        } catch (error) {
-        console.error("Error fetching users:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not fetch user data.',
-        });
-        } finally {
-        setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (user?.role === 'Admin') {
-            fetchUsers();
-        }
-    }, [user]);
-
-    const handleRoleChange = async (uid: string, newRole: UserRole) => {
-        const { db } = getFirebaseServices();
-        if (!db) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
-            return;
-        }
-
-        try {
-        const userDocRef = doc(db, 'users', uid);
-        await updateDoc(userDocRef, { role: newRole });
-        setUsers(prevUsers =>
-            prevUsers.map(u => (u.uid === uid ? { ...u, role: newRole } : u))
-        );
-        toast({
-            title: 'Success',
-            description: 'User role updated successfully.',
-        });
-        } catch (error) {
-        console.error("Error updating role:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not update user role.',
-        });
-        }
-    };
-    
-    if (loading) {
-        return (
-            <div className="rounded-lg border shadow-sm">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Role</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {[...Array(3)].map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell>
-                                    <Skeleton className="h-5 w-32" />
-                                    <Skeleton className="h-4 w-48 mt-1" />
-                                </TableCell>
-                                <TableCell>
-                                    <Skeleton className="h-10 w-32" />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-        );
-    }
-    
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage roles for all users in the system.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="rounded-lg border shadow-sm bg-card">
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead className="w-[200px]">Role</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {users.map((u) => (
-                        <TableRow key={u.uid}>
-                            <TableCell>
-                            <div className="font-medium">{u.displayName}</div>
-                            <div className="text-sm text-muted-foreground">{u.email}</div>
-                            </TableCell>
-                            <TableCell>
-                            <Select
-                                value={u.role}
-                                onValueChange={(newRole: UserRole) => handleRoleChange(u.uid, newRole)}
-                                disabled={user?.uid === u.uid} // Admin cannot change their own role
-                            >
-                                <SelectTrigger>
-                                <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                {userRoles.map((role) => (
-                                    <SelectItem key={role} value={role}>
-                                    {role}
-                                    </SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
 
 const ProfileSettings = () => {
     const { user, isInitialized } = useAuth();
@@ -396,20 +235,7 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your account and application settings.</p>
       </header>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          {user.role === 'Admin' && <TabsTrigger value="admin">Admin</TabsTrigger>}
-        </TabsList>
-        <TabsContent value="profile" className="pt-6">
-            <ProfileSettings />
-        </TabsContent>
-        {user.role === 'Admin' && (
-            <TabsContent value="admin" className="pt-6">
-                <AdminSettings />
-            </TabsContent>
-        )}
-      </Tabs>
+      <ProfileSettings />
     </div>
   );
 }

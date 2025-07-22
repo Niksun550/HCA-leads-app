@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +102,12 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                 <Settings className="h-5 w-5" />
                 Settings
               </NavLink>
+              {user.role === 'Admin' && (
+                <NavLink href="/admin" isActive={pathname.startsWith('/admin')} onClick={onLinkClick}>
+                    <Shield className="h-5 w-5" />
+                    Admin
+                </NavLink>
+              )}
             </nav>
             <div className="mt-auto p-4 border-t">
               <DropdownMenu>
