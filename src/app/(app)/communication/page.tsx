@@ -146,7 +146,7 @@ export default function CommunicationPage() {
 
   const handleSelectConversation = async (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    if (user && conversation.unreadCounts[user.uid] > 0) {
+    if (user && conversation.unreadCounts && conversation.unreadCounts[user.uid] > 0) {
       const { db } = getFirebaseServices();
       if (!db) return;
       const conversationRef = doc(db, 'conversations', conversation.id);
