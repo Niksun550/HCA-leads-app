@@ -75,7 +75,7 @@ export function UserList({
             </div>
           )}
           <ScrollArea className="h-full">
-            <TabsContent value="conversations" className="m-0 p-2">
+            <TabsContent value="conversations" className="m-0 pt-2 px-4 space-y-1">
               {filteredConversations.map((conv) => {
                 if (!user) return null;
                 const otherParticipantId = conv.participants.find(p => p !== user.uid);
@@ -118,7 +118,7 @@ export function UserList({
                 <p className="p-4 text-center text-sm text-muted-foreground">No conversations yet.</p>
               )}
             </TabsContent>
-            <TabsContent value="users" className="m-0 p-2">
+            <TabsContent value="users" className="m-0 pt-2 px-4 space-y-1">
               {filteredUsers.map((u) => (
                 <div
                   key={u.uid}
