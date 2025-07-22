@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, Conversation } from '@/types';
@@ -20,9 +20,9 @@ export default function CommunicationPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
 
   useEffect(() => {
     const { db } = getFirebaseServices();
@@ -55,15 +55,19 @@ export default function CommunicationPage() {
         if (prevConvs.length > 0) { // Only notify after initial load
             incomingConvs.forEach(newConv => {
                 const oldConv = prevConvs.find(c => c.id === newConv.id);
+                // Notify if it's a new conversation or there's a new message in an existing one
                 const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
 
                 if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
-                    const otherParticipantId = newConv.participants.find(p => p !== user.uid);
-                    const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
-                    toast({
-                        title: `New message from ${senderName}`,
-                        description: newConv.lastMessage?.text,
-                    });
+                    // Don't show notification if we are already viewing that chat
+                    if(selectedConversation?.id !== newConv.id) {
+                      const otherParticipantId = newConv.participants.find(p => p !== user.uid);
+                      const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
+                      toast({
+                          title: `New message from ${senderName}`,
+                          description: newConv.lastMessage?.text,
+                      });
+                    }
                 }
             });
         }
@@ -80,7 +84,7 @@ export default function CommunicationPage() {
     });
 
     return unsubscribeConversations;
-  }, [user, toast]);
+  }, [user, toast, selectedConversation?.id]);
 
 
   useEffect(() => {
@@ -88,32 +92,79 @@ export default function CommunicationPage() {
     return () => unsubscribe?.();
   }, [fetchConversations]);
 
-  const handleSelectUser = (user: AppUser) => {
-    setSelectedUser(user);
+  const handleSelectUser = async (selectedUser: AppUser) => {
+    if (!user) return;
+    setIsCreatingConversation(true);
+
+    // Check if a conversation with this user already exists
     const existingConversation = conversations.find(c => 
-      c.participants.length === 2 && c.participants.includes(user.uid)
+      c.participants.length === 2 && c.participants.includes(selectedUser.uid)
     );
-    setSelectedConversation(existingConversation || null);
+
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+      setIsCreatingConversation(false);
+      return;
+    }
+
+    // If no conversation exists, create a new one
+    const { db } = getFirebaseServices();
+    if (!db) {
+      setIsCreatingConversation(false);
+      return;
+    };
+    
+    const sortedParticipants = [user.uid, selectedUser.uid].sort();
+    const conversationId = sortedParticipants.join('_');
+    const conversationRef = doc(db, 'conversations', conversationId);
+
+    try {
+        const docSnap = await getDoc(conversationRef);
+        if(docSnap.exists()) {
+             const convData = { id: docSnap.id, ...docSnap.data() } as Conversation;
+             setSelectedConversation(convData);
+        } else {
+            const newConversation: Omit<Conversation, 'id'> = {
+                participants: sortedParticipants,
+                participantNames: {
+                    [user.uid]: user.displayName || user.email || 'User',
+                    [selectedUser.uid]: selectedUser.displayName || selectedUser.email || 'User',
+                },
+                participantPhotos: {
+                    [user.uid]: user.photoURL || null,
+                    [selectedUser.uid]: selectedUser.photoURL || null,
+                },
+                lastMessage: null,
+                updatedAt: Timestamp.now(),
+            };
+            await setDoc(conversationRef, newConversation);
+            const createdConv = { id: conversationRef.id, ...newConversation } as Conversation;
+            
+            // Add to local state immediately
+            setConversations(prev => [createdConv, ...prev]);
+            setSelectedConversation(createdConv);
+        }
+    } catch(error) {
+        console.error("Error creating or fetching conversation:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not start the conversation.'
+        });
+    } finally {
+        setIsCreatingConversation(false);
+    }
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    setSelectedUser(null);
-  };
-  
-  const handleConversationCreated = (conversation: Conversation) => {
-    if (!conversations.some(c => c.id === conversation.id)) {
-        setConversations(prev => [conversation, ...prev]);
-    }
-    setSelectedConversation(conversation);
-    setSelectedUser(null); // Clear selected user once conversation is created/selected
   };
 
   const getLayout = () => {
     if (isMobile) {
       return (
         <div className="h-full w-full">
-          { !selectedConversation && !selectedUser ? (
+          { !selectedConversation ? (
              <UserList
                 users={users}
                 conversations={conversations}
@@ -124,14 +175,11 @@ export default function CommunicationPage() {
               />
           ) : (
              <ChatWindow
-              key={selectedConversation?.id || selectedUser?.uid}
+              key={selectedConversation?.id}
               conversation={selectedConversation}
-              selectedUser={selectedUser}
               onBack={() => {
                 setSelectedConversation(null);
-                setSelectedUser(null);
               }}
-              onConversationCreated={handleConversationCreated}
             />
           )}
         </div>
@@ -149,17 +197,15 @@ export default function CommunicationPage() {
               onSelectUser={handleSelectUser}
               onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversation?.id}
-              loading={loading}
+              loading={loading || isCreatingConversation}
             />
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
-           {selectedConversation || selectedUser ? (
+           {selectedConversation ? (
             <ChatWindow
-              key={selectedConversation?.id || selectedUser?.uid}
+              key={selectedConversation?.id}
               conversation={selectedConversation}
-              selectedUser={selectedUser}
-              onConversationCreated={handleConversationCreated}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center bg-card text-muted-foreground">
