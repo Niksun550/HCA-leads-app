@@ -74,3 +74,12 @@ export interface Lead {
   structureTeamMemberId?: string | null;
   structureTeamMemberName?: string | null;
 }
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  participantNames: Record<string, string>;
+  participantPhotos: Record<string, string | null>;
+  lastMessage: Message | null;
+  updatedAt: Timestamp;
+}

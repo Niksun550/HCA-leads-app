@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +66,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
               <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')} onClick={onLinkClick}>
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
+              </NavLink>
+               <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
+                <MessageSquare className="h-5 w-5" />
+                Communication
               </NavLink>
               <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
                 <Settings className="h-5 w-5" />
