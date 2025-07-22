@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,7 +23,9 @@ export default function CommunicationPage() {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const conversationsRef = useRef<Conversation[]>([]);
+  const isInitialLoadRef = useRef(true);
+
 
   useEffect(() => {
     const { db } = getFirebaseServices();
@@ -49,13 +51,13 @@ export default function CommunicationPage() {
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
-      const currentConversations = conversations;
       const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+      const previousConversations = conversationsRef.current;
       
-      if (!isInitialLoad) {
+      if (!isInitialLoadRef.current) {
           incomingConvs.forEach(newConv => {
-              const oldConv = currentConversations.find(c => c.id === newConv.id);
-              const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
+              const oldConv = previousConversations.find(c => c.id === newConv.id);
+              const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv?.lastMessage?.id);
 
               if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
                   if(selectedConversation?.id !== newConv.id) {
@@ -72,16 +74,22 @@ export default function CommunicationPage() {
 
       incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
       setConversations(incomingConvs);
+      conversationsRef.current = incomingConvs;
       setLoading(false);
-      setIsInitialLoad(false);
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+      }
 
     }, (error) => {
       console.error("Error fetching conversations:", error);
       setLoading(false);
     });
 
-    return unsubscribeConversations;
-  }, [user, toast, selectedConversation?.id, isInitialLoad]);
+    return () => {
+        unsubscribeConversations();
+        isInitialLoadRef.current = true;
+    }
+  }, [user, toast, selectedConversation?.id]);
 
   const handleSelectUser = async (selectedUser: AppUser) => {
     if (!user) return;
