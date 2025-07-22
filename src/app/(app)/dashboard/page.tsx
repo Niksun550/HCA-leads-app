@@ -206,7 +206,18 @@ export default function DashboardPage() {
       </header>
       
       {user.role === 'Director' ? (
-        <ForecastingDashboard leads={filteredLeads} />
+        <>
+          <StatCards leads={filteredLeads} />
+
+          <div className="grid gap-8 md:grid-cols-5">
+            <div className="md:col-span-3">
+              <LeadsChart leads={filteredLeads} />
+            </div>
+            <div className="md:col-span-2">
+              <LeadsMap leads={filteredLeads} />
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <StatCards leads={filteredLeads} />
