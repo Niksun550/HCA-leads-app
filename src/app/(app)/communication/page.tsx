@@ -23,6 +23,7 @@ export default function CommunicationPage() {
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     const { db } = getFirebaseServices();
@@ -39,7 +40,7 @@ export default function CommunicationPage() {
     return () => unsubscribeUsers();
   }, [user]);
   
-  const fetchConversations = useCallback(() => {
+  useEffect(() => {
     if (!user) return;
     const { db } = getFirebaseServices();
     if (!db) return;
@@ -48,66 +49,43 @@ export default function CommunicationPage() {
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
-      setConversations(prevConvs => {
-        const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
-        
-        // Handle notifications
-        if (prevConvs.length > 0) { // Only notify after initial load
-            incomingConvs.forEach(newConv => {
-                const oldConv = prevConvs.find(c => c.id === newConv.id);
-                // Notify if it's a new conversation or there's a new message in an existing one
-                const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
+      const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+      
+      if (!isInitialLoad) {
+          incomingConvs.forEach(newConv => {
+              const oldConv = conversations.find(c => c.id === newConv.id);
+              const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv.lastMessage?.id);
 
-                if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
-                    // Don't show notification if we are already viewing that chat
-                    if(selectedConversation?.id !== newConv.id) {
-                      const otherParticipantId = newConv.participants.find(p => p !== user.uid);
-                      const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
-                      toast({
-                          title: `New message from ${senderName}`,
-                          description: newConv.lastMessage?.text,
-                      });
-                    }
-                }
-            });
-        }
-        
-        // Safe sorting
-        incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        return incomingConvs;
-      });
+              if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
+                  if(selectedConversation?.id !== newConv.id) {
+                    const otherParticipantId = newConv.participants.find(p => p !== user.uid);
+                    const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
+                    toast({
+                        title: `New message from ${senderName}`,
+                        description: newConv.lastMessage?.text,
+                    });
+                  }
+              }
+          });
+      }
 
+      incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+      setConversations(incomingConvs);
       setLoading(false);
+      setIsInitialLoad(false);
+
     }, (error) => {
       console.error("Error fetching conversations:", error);
       setLoading(false);
     });
 
     return unsubscribeConversations;
-  }, [user, toast, selectedConversation?.id]);
-
-
-  useEffect(() => {
-    const unsubscribe = fetchConversations();
-    return () => unsubscribe?.();
-  }, [fetchConversations]);
+  }, [user, toast, selectedConversation?.id, isInitialLoad, conversations]);
 
   const handleSelectUser = async (selectedUser: AppUser) => {
     if (!user) return;
     setIsCreatingConversation(true);
 
-    // Check if a conversation with this user already exists
-    const existingConversation = conversations.find(c => 
-      c.participants.length === 2 && c.participants.includes(selectedUser.uid)
-    );
-
-    if (existingConversation) {
-      setSelectedConversation(existingConversation);
-      setIsCreatingConversation(false);
-      return;
-    }
-
-    // If no conversation exists, create a new one
     const { db } = getFirebaseServices();
     if (!db) {
       setIsCreatingConversation(false);
@@ -139,9 +117,6 @@ export default function CommunicationPage() {
             };
             await setDoc(conversationRef, newConversation);
             const createdConv = { id: conversationRef.id, ...newConversation } as Conversation;
-            
-            // Add to local state immediately
-            setConversations(prev => [createdConv, ...prev]);
             setSelectedConversation(createdConv);
         }
     } catch(error) {
