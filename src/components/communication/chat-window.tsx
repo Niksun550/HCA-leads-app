@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, LoaderCircle, ArrowLeft, MessageSquare, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -36,7 +35,6 @@ export function ChatWindow({ conversation, selectedUser, onBack, onConversationC
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const { toast } = useToast();
   
   const activeConversationId = conversation?.id;
 
@@ -55,21 +53,7 @@ export function ChatWindow({ conversation, selectedUser, onBack, onConversationC
     const messagesQuery = query(collection(db, `conversations/${activeConversationId}/messages`), orderBy("createdAt", "asc"));
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const incomingMessages = snapshot.docs.map(doc => doc.data() as Message);
-      
-      setMessages(prevMessages => {
-          // Check for new messages to show a toast
-          if (prevMessages.length > 0 && incomingMessages.length > prevMessages.length) {
-              const lastMessage = incomingMessages[incomingMessages.length - 1];
-              if (lastMessage.authorId !== user?.uid) {
-                  const participantInfo = getParticipantInfo();
-                  toast({
-                      title: `New message from ${participantInfo?.name || 'User'}`,
-                      description: lastMessage.text,
-                  });
-              }
-          }
-          return incomingMessages;
-      });
+      setMessages(incomingMessages);
       setIsLoading(false);
     }, (error) => {
         console.error("Error fetching messages:", error);
@@ -77,7 +61,7 @@ export function ChatWindow({ conversation, selectedUser, onBack, onConversationC
     });
 
     return () => unsubscribe();
-  }, [activeConversationId, user?.uid]);
+  }, [activeConversationId]);
 
 
   useEffect(() => {
