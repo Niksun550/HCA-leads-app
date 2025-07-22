@@ -87,7 +87,7 @@ export function UserList({
                     <p className="font-semibold truncate">{name}</p>
                     <p className="text-sm text-muted-foreground truncate">{conv.lastMessage?.text || "No messages yet"}</p>
                   </div>
-                   {conv.lastMessage && (
+                   {conv.lastMessage && conv.updatedAt?.toDate && (
                      <p className="text-xs text-muted-foreground self-start">
                         {formatDistanceToNowStrict(conv.updatedAt.toDate())}
                     </p>
@@ -130,4 +130,3 @@ export function UserList({
     </div>
   );
 }
-
