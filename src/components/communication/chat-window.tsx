@@ -51,7 +51,12 @@ export function ChatWindow({ conversation, users, onConversationCreated }: ChatW
         setMessages(msgs);
       });
 
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+        setMessages([]); // Clear messages when conversation changes
+      };
+    } else {
+        setMessages([]); // Clear messages if no conversation is selected
     }
   }, [conversation, db]);
 
