@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, Conversation } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +52,12 @@ export default function CommunicationPage() {
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
-      const incomingConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+      const incomingConvs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Firestore timestamps need to be manually converted when coming from a function
+        const updatedAt = data.updatedAt ? new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds) : Timestamp.now();
+        return { id: doc.id, ...data, updatedAt } as Conversation;
+      });
       const previousConversations = conversationsRef.current;
       
       if (!isInitialLoadRef.current) {
@@ -95,43 +101,27 @@ export default function CommunicationPage() {
     if (!user) return;
     setIsCreatingConversation(true);
 
-    const { db } = getFirebaseServices();
-    if (!db) {
-      setIsCreatingConversation(false);
-      return;
-    };
-    
-    const sortedParticipants = [user.uid, selectedUser.uid].sort();
-    const conversationId = sortedParticipants.join('_');
-    const conversationRef = doc(db, 'conversations', conversationId);
-
     try {
-        const docSnap = await getDoc(conversationRef);
-        if(docSnap.exists()) {
-             const convData = { id: docSnap.id, ...docSnap.data() } as Conversation;
-             setSelectedConversation(convData);
-        } else {
-            const newConversation: Omit<Conversation, 'id'> = {
-                participants: sortedParticipants,
-                participantNames: {
-                    [user.uid]: user.displayName || user.email || 'User',
-                    [selectedUser.uid]: selectedUser.displayName || selectedUser.email || 'User',
-                },
-                participantPhotos: {
-                    [user.uid]: user.photoURL || null,
-                    [selectedUser.uid]: selectedUser.photoURL || null,
-                },
-                lastMessage: null,
-                updatedAt: Timestamp.now(),
-                unreadCounts: {
-                    [user.uid]: 0,
-                    [selectedUser.uid]: 0,
-                },
-            };
-            await setDoc(conversationRef, newConversation);
-            const createdConv = { id: conversationRef.id, ...newConversation } as Conversation;
-            setSelectedConversation(createdConv);
-        }
+        const functions = getFunctions();
+        const createConversation = httpsCallable(functions, 'createConversation');
+        const result = await createConversation({ otherUserId: selectedUser.uid });
+        
+        const { conversation: convData } = result.data as { conversation: any };
+
+        const updatedAt = convData.updatedAt ? new Timestamp(convData.updatedAt._seconds, convData.updatedAt._nanoseconds) : Timestamp.now();
+        
+        const lastMessage = convData.lastMessage ? {
+            ...convData.lastMessage,
+            createdAt: convData.lastMessage.createdAt ? new Timestamp(convData.lastMessage.createdAt._seconds, convData.lastMessage.createdAt._nanoseconds) : Timestamp.now()
+        } : null;
+
+        const conversation: Conversation = {
+            ...convData,
+            updatedAt,
+            lastMessage
+        };
+
+        setSelectedConversation(conversation);
     } catch(error) {
         console.error("Error creating or fetching conversation:", error);
         toast({
