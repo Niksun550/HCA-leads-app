@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, UserRole } from '@/types';
@@ -53,9 +53,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoaderCircle, MoreHorizontal, Trash2 } from 'lucide-react';
 
-// This would ideally be in a config file
-const DELETE_USER_FUNCTION_URL = `https://us-central1-${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net/deleteUser`;
-
 const AdminPage = () => {
     const { user, isInitialized } = useAuth();
     const router = useRouter();
@@ -65,6 +62,8 @@ const AdminPage = () => {
     const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+
+    const deleteUserFunctionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net/deleteUser`;
 
     useEffect(() => {
         if (isInitialized) {
@@ -135,12 +134,12 @@ const AdminPage = () => {
     }
     
     const handleDeleteUser = async () => {
-      if (!userToDelete) return;
+      if (!userToDelete || !user) return;
 
       setIsDeleting(true);
       try {
-        const idToken = await user?.getIdToken();
-        const response = await fetch(DELETE_USER_FUNCTION_URL, {
+        const idToken = await user.getIdToken();
+        const response = await fetch(deleteUserFunctionUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -152,13 +151,6 @@ const AdminPage = () => {
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error?.message || 'Failed to delete user.');
-        }
-
-        // Also delete from firestore
-        const { db } = getFirebaseServices();
-        if(db) {
-            const userDocRef = doc(db, 'users', userToDelete.uid);
-            await deleteDoc(userDocRef);
         }
         
         setUsers(prevUsers => prevUsers.filter(u => u.uid !== userToDelete.uid));
