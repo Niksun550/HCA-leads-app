@@ -87,7 +87,10 @@ export default function DashboardPage() {
       } else if (user.role === 'Sales Rep') {
           leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
       } else if (user.role === 'Structure') {
-          leadsQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
+          leadsQuery = query(collection(db, 'leads'), or(
+              where('structureTeamMemberId', '==', user.uid),
+              where('status', '==', 'Structure Pending')
+          ));
       } else {
           // Default to no leads if role is unrecognized
           leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
@@ -244,3 +247,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
