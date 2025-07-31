@@ -35,25 +35,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  
+  const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({} as Record<LeadStatus, boolean>);
 
   const availableStatuses = useMemo(() => {
     if (!user) return [];
     return user.role === 'Structure' ? structureLeadStatuses : leadStatuses;
   }, [user]);
 
-  const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>(() => {
-    const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
-    const statusesToUse = user?.role === 'Structure' ? structureLeadStatuses : leadStatuses;
-    statusesToUse.forEach(status => initialFilters[status] = true);
-    return initialFilters as Record<LeadStatus, boolean>;
-  });
-  
   useEffect(() => {
-    if (!user) return;
-    const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
-    availableStatuses.forEach(status => initialFilters[status] = true);
-    setStatusFilters(initialFilters as Record<LeadStatus, boolean>);
-  }, [availableStatuses, user]);
+    if (user) {
+      const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
+      availableStatuses.forEach(status => initialFilters[status] = true);
+      setStatusFilters(initialFilters as Record<LeadStatus, boolean>);
+    }
+  }, [user, availableStatuses]);
 
 
   useEffect(() => {
@@ -132,6 +128,8 @@ export default function DashboardPage() {
   };
 
   const filteredLeads = useMemo(() => {
+    const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
+    if (activeFilters.length === 0) return leads;
     return leads.filter(lead => statusFilters[lead.status]);
   }, [leads, statusFilters]);
 
