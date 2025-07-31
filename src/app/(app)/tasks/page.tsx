@@ -11,7 +11,6 @@ import { PlusCircle, LoaderCircle } from "lucide-react";
 import TaskForm from "@/components/tasks/task-form";
 import { TasksTable } from "@/components/tasks/tasks-table";
 import { useToast } from "@/hooks/use-toast";
-import { structureLeadStatuses } from "@/types";
 
 export default function TasksPage() {
     const { user, isInitialized } = useAuth();
@@ -47,46 +46,18 @@ export default function TasksPage() {
         } else if (user.role === 'Sales Rep') {
             leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
         } else if (user.role === 'Structure') {
-             // For Structure role, we need to fetch leads assigned to them OR leads with a structure status.
-             // Firestore `or` does not support `in` on a different field, so we do two queries and merge.
-             const fetchStructureLeads = async () => {
-                try {
-                    const assignedQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
-                    const statusQuery = query(collection(db, 'leads'), where('status', 'in', structureLeadStatuses));
-                    
-                    const [assignedSnapshot, statusSnapshot] = await Promise.all([
-                        getDocs(assignedQuery),
-                        getDocs(statusQuery)
-                    ]);
-                    
-                    const leadsMap = new Map<string, Lead>();
-                    assignedSnapshot.docs.forEach(doc => leadsMap.set(doc.id, { id: doc.id, ...doc.data() } as Lead));
-                    statusSnapshot.docs.forEach(doc => leadsMap.set(doc.id, { id: doc.id, ...doc.data() } as Lead));
-
-                    setAllLeads(Array.from(leadsMap.values()));
-                } catch (error) {
-                    console.error("Error fetching leads for tasks:", error);
-                }
-             };
-             fetchStructureLeads();
-             // Since this is a one-time fetch, we won't get a real-time unsubscribe function.
-             // For a fully real-time app, a more complex state management would be needed.
-             // This is sufficient for the dropdown's purpose.
-             
+             leadsQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
         } else {
             leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid_user_id')); // No leads for others
         }
         
-        let unsubscribeLeads = () => {};
-        if (leadsQuery) {
-            unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
-                setAllLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
-            }, (error) => {
-                console.error("Error fetching leads for tasks:", error);
-                // Don't block UI for this, dropdown will just be empty
-            });
-        }
-
+        const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+            setAllLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
+        }, (error) => {
+            console.error("Error fetching leads for tasks:", error);
+            // Don't block UI for this, dropdown will just be empty
+        });
+        
 
         // Fetch tasks assigned to the current user
         let tasksQuery;

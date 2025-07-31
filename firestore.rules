@@ -3,67 +3,90 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
     function isAuth() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return request.auth.token.role == 'Admin';
-    }
-    
-    function isDirector() {
-      return request.auth.token.role == 'Director';
-    }
-
-    function isStructure() {
-      return request.auth.token.role == 'Structure';
-    }
-
-    function isSalesRep() {
-      return request.auth.token.role == 'Sales Rep';
-    }
-    
-    function isViewer() {
-        return request.auth.token.role == 'Viewer';
-    }
-
-    // Rules for 'users' collection
     match /users/{userId} {
-      allow read, list: if isAuth();
+      allow read: if isAuth();
       allow write: if isAuth() && request.auth.uid == userId;
-      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAdmin();
     }
-    
-    // Rules for 'leads' collection
+
     match /leads/{leadId} {
-      allow create: if isAuth() && (isSalesRep() || isAdmin());
-      allow read: if isAuth() && (
-                    isAdmin() || 
-                    isDirector() ||
-                    isViewer() || 
-                    (isSalesRep() && resource.data.ownerId == request.auth.uid) ||
-                    (isStructure() && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design']))
-                  );
-      allow update, delete: if isAuth() && (isAdmin() || (isSalesRep() && resource.data.ownerId == request.auth.uid));
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isStructureMember() {
+        return request.auth.uid == resource.data.structureTeamMemberId;
+      }
+      
+      function isStructurePendingStatus() {
+          return resource.data.status == 'Structure Pending';
+      }
+
+      function userRole() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      }
+
+      function isAdmin() {
+        return userRole() == 'Admin';
+      }
+      
+      function isDirector() {
+        return userRole() == 'Director';
+      }
+
+      function isViewer() {
+        return userRole() == 'Viewer';
+      }
+      
+      function isStructureUser() {
+          return userRole() == 'Structure';
+      }
+
+      allow create: if isAuth();
+      allow read: if isAuth() && (isAdmin() || isDirector() || isViewer() || isOwner() || (isStructureUser() && (isStructureMember() || isStructurePendingStatus())));
+      allow update, delete: if isAuth() && (isAdmin() || isOwner());
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.participants;
+      allow create: if isAuth() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuth() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isAuth() && request.auth.uid == request.resource.data.authorId;
+      }
     }
     
-    // Rules for 'tasks' collection
     match /tasks/{taskId} {
-      allow create: if isAuth();
-      allow read, list: if isAuth() && (isAdmin() || isDirector() || resource.data.assigneeId == request.auth.uid);
-      allow update: if isAuth() && (isAdmin() || request.auth.uid == resource.data.createdBy || request.auth.uid == resource.data.assigneeId);
-      allow delete: if isAuth() && (isAdmin() || request.auth.uid == resource.data.createdBy);
-    }
-
-    // Rules for 'conversations' collection
-    match /conversations/{conversationId} {
-      allow read, write: if isAuth() && request.auth.uid in resource.data.participants;
-
-      match /messages/{messageId} {
-        allow read, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      function isAssignee() {
+        return request.auth.uid == resource.data.assigneeId;
       }
+      
+      function wasCreator() {
+         return request.auth.uid == resource.data.createdBy;
+      }
+      
+      function userRole() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      }
+
+      function isAdmin() {
+        return userRole() == 'Admin';
+      }
+      
+       function isDirector() {
+        return userRole() == 'Director';
+      }
+
+      allow read: if isAuth() && (isAdmin() || isDirector() || isAssignee());
+      allow create: if isAuth();
+      allow update: if isAuth() && (isAdmin() || wasCreator() || isAssignee());
+      allow delete: if isAuth() && (isAdmin() || wasCreator());
     }
   }
 }
