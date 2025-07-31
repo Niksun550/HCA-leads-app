@@ -8,12 +8,14 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Task, TaskPriority, TaskCategory } from "@/types";
 import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks } from 'date-fns';
 
-import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp } from "lucide-react";
+import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import TaskForm from "@/components/tasks/task-form";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 const priorityIcons: Record<TaskPriority, React.ReactNode> = {
     High: <ChevronUp className="h-4 w-4 text-red-500" />,
@@ -57,10 +59,14 @@ export default function PlannerPage() {
         }
         
         setLoading(true);
+        
         const startOfWeekDate = Timestamp.fromDate(weekDates[0]);
         const endOfWeekDate = Timestamp.fromDate(addDays(weekDates[6], 1));
 
-        const tasksQuery = query(
+        let tasksQuery;
+        
+        // All users, including Admins, only see tasks assigned to them in the planner
+        tasksQuery = query(
             collection(db, 'tasks'), 
             where('assigneeId', '==', user.uid),
             where('dueDate', '>=', startOfWeekDate),
@@ -94,18 +100,40 @@ export default function PlannerPage() {
 
     return (
         <div className="py-4 space-y-8">
-            <header className="flex items-center justify-between">
-                <div>
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                 <div>
                     <h1 className="text-3xl font-bold font-headline tracking-tight">Weekly Planner</h1>
-                    <p className="text-muted-foreground">Your tasks for the week of {weekDates.length > 0 ? format(weekDates[0], 'MMMM do') : ''}.</p>
+                    <p className="text-muted-foreground">Your tasks for the week.</p>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => setCurrentDate(subWeeks(currentDate, 1))}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                     <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-                        Today
-                    </Button>
+                    
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-[240px] justify-start text-left font-normal",
+                                !currentDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {format(currentDate, "MMMM yyyy")}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={currentDate}
+                                onSelect={(date) => date && setCurrentDate(date)}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+
                     <Button variant="outline" size="icon" onClick={() => setCurrentDate(addWeeks(currentDate, 1))}>
                         <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -116,7 +144,7 @@ export default function PlannerPage() {
                 {weekDates.map(date => {
                     const tasksForDay = tasks.filter(task => isSameDay(task.dueDate.toDate(), date));
                     return (
-                        <div key={date.toISOString()} className="bg-muted/50 rounded-lg p-3">
+                        <div key={date.toISOString()} className={cn("rounded-lg p-3", isSameDay(date, new Date()) ? "bg-primary/10" : "bg-muted/50")}>
                             <h3 className="font-semibold text-center mb-2">{format(date, 'EEE')}</h3>
                             <h4 className="text-xl font-bold text-center mb-4">{format(date, 'd')}</h4>
                             <div className="space-y-2 min-h-[100px]">
