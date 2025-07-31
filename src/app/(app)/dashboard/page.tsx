@@ -65,18 +65,11 @@ export default function DashboardPage() {
         return;
     }
 
-    const fetchUsers = async () => {
-      try {
-        const usersCollection = collection(db, 'users');
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+    const usersCollection = collection(db, 'users');
+    const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
         setAllUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        setAllUsers(user ? [user] : []); // Fallback to current user if available
-      }
-    };
-    fetchUsers();
+    });
     
     let leadsQuery;
     if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
@@ -89,7 +82,6 @@ export default function DashboardPage() {
             where('status', '==', 'Structure Pending')
         ));
     } else {
-        // Default to no leads if role is unrecognized
         leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
     }
 
@@ -103,6 +95,7 @@ export default function DashboardPage() {
     });
 
     return () => {
+        unsubscribeUsers();
         unsubscribeLeads();
     };
 
