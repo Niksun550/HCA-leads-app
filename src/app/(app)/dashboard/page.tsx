@@ -79,7 +79,7 @@ export default function DashboardPage() {
     } else if (user.role === 'Structure') {
         leadsQuery = query(collection(db, 'leads'), or(
             where('structureTeamMemberId', '==', user.uid),
-            where('status', '==', 'Structure Pending')
+            where('status', 'in', structureLeadStatuses)
         ));
     } else {
         leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
@@ -182,7 +182,7 @@ export default function DashboardPage() {
              <FileSpreadsheet className="mr-2 h-4 w-4" />
              Export
           </Button>
-          {user.role !== 'Viewer' && user.role !== 'Structure' && user.role !== 'Director' && (
+          {user.role !== 'Viewer' && user.role !== 'Structure' && (
             <Button onClick={handleAddLead}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Lead
@@ -219,3 +219,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

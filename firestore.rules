@@ -3,51 +3,58 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Helper function to check if the user has a specific role
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Helper function to check if user is an owner of the lead
+    function isOwner(lead) {
+      return request.auth.uid == lead.ownerId;
+    }
+    
+    // Helper function to check if user is a structure team member on the lead
+    function isStructureMember(lead) {
+      return request.auth.uid == lead.structureTeamMemberId;
     }
 
-    // USERS
-    // Allow authenticated users to read user data
-    // Only admins can change roles
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.token.role == 'Admin' 
-                   || request.auth.uid == userId; // Allow users to update their own profile
+      allow write: if hasRole('Admin') || request.auth.uid == userId;
     }
 
-    // LEADS
-    // Granular access control for leads based on user role
     match /leads/{leadId} {
-      allow read: if request.auth != null && (
-                    request.auth.token.role == 'Admin' ||
-                    request.auth.token.role == 'Viewer' ||
-                    request.auth.token.role == 'Director' ||
-                    (request.auth.token.role == 'Sales Rep' && resource.data.ownerId == request.auth.uid) ||
-                    (request.auth.token.role == 'Structure' && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status == 'Structure Pending'))
-                  );
-      allow create: if request.auth != null && (
-                      request.auth.token.role == 'Admin' || 
-                      request.auth.token.role == 'Sales Rep'
-                    );
-      allow update: if request.auth != null && (
-                      request.auth.token.role == 'Admin' ||
-                      (request.auth.token.role == 'Sales Rep' && resource.data.ownerId == request.auth.uid) ||
-                      (request.auth.token.role == 'Structure' && resource.data.structureTeamMemberId == request.auth.uid)
-                    );
-      allow delete: if request.auth.token.role == 'Admin';
+      // Admins, Directors, and Viewers can read all leads
+      // Sales Reps can read leads they own
+      // Structure members can read leads assigned to them OR leads that are pending for the structure team
+      allow read: if request.auth != null &&
+                    (hasRole('Admin') || hasRole('Director') || hasRole('Viewer') ||
+                     (hasRole('Sales Rep') && isOwner(resource.data)) ||
+                     (hasRole('Structure') && (isStructureMember(resource.data) || resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending'])));
+
+      // Admins, Sales Reps (if owner), and Structure members (if assigned) can create/update
+      allow write: if request.auth != null &&
+                     (hasRole('Admin') ||
+                      (hasRole('Sales Rep') && (isOwner(request.resource.data) || isOwner(resource.data))) ||
+                      (hasRole('Structure') && (isStructureMember(request.resource.data) || isStructureMember(resource.data))));
+                      
+      allow delete: if hasRole('Admin');
     }
 
-    // CONVERSATIONS
-    // Only participants can read/update a conversation and its messages
     match /conversations/{conversationId} {
-      allow read, update: if request.auth.uid in resource.data.participants;
+      // Allow read and write only if the user is a participant in the conversation
+      allow read, update, delete: if request.auth.uid in resource.data.participants;
+      
+      // Allow create if the user is in the participants list of the new document
+      allow create: if request.auth.uid in request.resource.data.participants;
 
       match /messages/{messageId} {
-        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+         // Allow read and write only if the user is a participant in the conversation
+         allow read, write: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
       }
     }
   }
 }
+
+    
