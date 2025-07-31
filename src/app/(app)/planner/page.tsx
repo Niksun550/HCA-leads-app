@@ -55,23 +55,16 @@ export default function PlannerPage() {
             return;
         }
         
+        setLoading(true);
         const startOfWeekDate = Timestamp.fromDate(weekDates[0]);
         const endOfWeekDate = Timestamp.fromDate(addDays(weekDates[6], 1));
 
-        let tasksQuery = query(
+        const tasksQuery = query(
             collection(db, 'tasks'), 
             where('assigneeId', '==', user.uid),
             where('dueDate', '>=', startOfWeekDate),
             where('dueDate', '<', endOfWeekDate)
         );
-        
-        if (user.role === 'Admin' || user.role === 'Director') {
-             tasksQuery = query(
-                collection(db, 'tasks'),
-                where('dueDate', '>=', startOfWeekDate),
-                where('dueDate', '<', endOfWeekDate)
-            );
-        }
 
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
             const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
