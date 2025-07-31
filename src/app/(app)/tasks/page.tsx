@@ -11,6 +11,7 @@ import { PlusCircle, LoaderCircle } from "lucide-react";
 import TaskForm from "@/components/tasks/task-form";
 import { TasksTable } from "@/components/tasks/tasks-table";
 import { useToast } from "@/hooks/use-toast";
+import { structureLeadStatuses } from "@/types";
 
 export default function TasksPage() {
     const { user, isInitialized } = useAuth();
@@ -46,7 +47,10 @@ export default function TasksPage() {
         } else if (user.role === 'Sales Rep') {
             leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
         } else if (user.role === 'Structure') {
-             leadsQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
+             leadsQuery = query(collection(db, 'leads'), or(
+                where('structureTeamMemberId', '==', user.uid),
+                where('status', 'in', structureLeadStatuses)
+            ));
         } else {
             leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid_user_id')); // No leads for others
         }
