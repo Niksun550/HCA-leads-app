@@ -6,13 +6,14 @@ import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firest
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, TaskPriority, TaskCategory } from "@/types";
-import { addDays, format, startOfWeek, isSameDay } from 'date-fns';
+import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks } from 'date-fns';
 
-import { LoaderCircle, CheckCircle, Clock, XCircle, ChevronUp, Briefcase, DollarSign, FileText, Phone } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import TaskForm from "@/components/tasks/task-form";
+import { Button } from "@/components/ui/button";
 
 const priorityIcons: Record<TaskPriority, React.ReactNode> = {
     High: <ChevronUp className="h-4 w-4 text-red-500" />,
@@ -32,16 +33,16 @@ export default function PlannerPage() {
     const { user, isInitialized } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentDate, setCurrentDate] = useState(new Date());
     const [weekDates, setWeekDates] = useState<Date[]>([]);
     const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     useEffect(() => {
-        const today = new Date();
-        const start = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+        const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
         const dates = Array.from({ length: 7 }).map((_, i) => addDays(start, i));
         setWeekDates(dates);
-    }, []);
+    }, [currentDate]);
 
     useEffect(() => {
         if (!isInitialized || !user || weekDates.length === 0) {
@@ -93,9 +94,22 @@ export default function PlannerPage() {
 
     return (
         <div className="py-4 space-y-8">
-            <header>
-                <h1 className="text-3xl font-bold font-headline tracking-tight">Weekly Planner</h1>
-                <p className="text-muted-foreground">Your tasks for the week of {weekDates.length > 0 ? format(weekDates[0], 'MMMM do') : ''}.</p>
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline tracking-tight">Weekly Planner</h1>
+                    <p className="text-muted-foreground">Your tasks for the week of {weekDates.length > 0 ? format(weekDates[0], 'MMMM do') : ''}.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => setCurrentDate(subWeeks(currentDate, 1))}>
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                     <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+                        Today
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => setCurrentDate(addWeeks(currentDate, 1))}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 items-start">
@@ -135,15 +149,11 @@ export default function PlannerPage() {
                     );
                 })}
             </div>
-            {/* The TaskForm dialog is not rendered directly here, but it can be opened from this page.
-                We need a way to open it without it being tied to a specific lead.
-                For now, editing a task opens the form. Adding a new task for a specific day can be a future feature.
-            */}
              <TaskForm
                 isOpen={isTaskFormOpen}
                 setIsOpen={setIsTaskFormOpen}
                 task={selectedTask}
-                users={[]} // Users and leads are not needed when just viewing/editing from planner
+                users={[]}
                 leads={[]}
             />
         </div>
