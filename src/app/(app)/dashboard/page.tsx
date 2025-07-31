@@ -43,7 +43,7 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => {
-    if (user && availableStatuses.length > 0) {
+    if (user) {
       const initialFilters = availableStatuses.reduce((acc, status) => {
         acc[status] = true;
         return acc;
@@ -212,10 +212,10 @@ export default function DashboardPage() {
               <LeadsMap leads={filteredLeads} />
             </div>
           </div>
+          
+          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
         </>
       )}
-
-      <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
 
       <LeadForm
         isOpen={isFormOpen}
