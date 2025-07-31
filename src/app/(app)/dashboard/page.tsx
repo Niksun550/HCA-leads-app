@@ -13,7 +13,6 @@ import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
 import {
   DropdownMenu,
@@ -66,8 +65,6 @@ export default function DashboardPage() {
         return;
     }
 
-    setLoading(true);
-
     const fetchUsers = async () => {
       try {
         const usersCollection = collection(db, 'users');
@@ -80,7 +77,7 @@ export default function DashboardPage() {
       }
     };
     fetchUsers();
-
+    
     let leadsQuery;
     if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
         leadsQuery = query(collection(db, 'leads'));
