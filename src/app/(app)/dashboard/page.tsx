@@ -68,7 +68,7 @@ export default function DashboardPage() {
 
     setLoading(true);
 
-    const fetchUsersAndLeads = async () => {
+    const fetchUsers = async () => {
       try {
         const usersCollection = collection(db, 'users');
         const usersSnapshot = await getDocs(usersCollection);
@@ -78,43 +78,35 @@ export default function DashboardPage() {
         console.error("Error fetching users:", error);
         setAllUsers(user ? [user] : []); // Fallback to current user if available
       }
-
-      let leadsQuery;
-      if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
-          leadsQuery = query(collection(db, 'leads'));
-      } else if (user.role === 'Sales Rep') {
-          leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
-      } else if (user.role === 'Structure') {
-          leadsQuery = query(collection(db, 'leads'), or(
-              where('structureTeamMemberId', '==', user.uid),
-              where('status', '==', 'Structure Pending')
-          ));
-      } else {
-          // Default to no leads if role is unrecognized
-          leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
-      }
-
-      const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
-        const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
-        setLeads(leadsData);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching leads:", error);
-        setLoading(false);
-      });
-
-      return unsubscribeLeads;
     };
+    fetchUsers();
 
-    let unsubscribe: (() => void) | undefined;
-    fetchUsersAndLeads().then(unsub => {
-        unsubscribe = unsub;
+    let leadsQuery;
+    if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
+        leadsQuery = query(collection(db, 'leads'));
+    } else if (user.role === 'Sales Rep') {
+        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+    } else if (user.role === 'Structure') {
+        leadsQuery = query(collection(db, 'leads'), or(
+            where('structureTeamMemberId', '==', user.uid),
+            where('status', '==', 'Structure Pending')
+        ));
+    } else {
+        // Default to no leads if role is unrecognized
+        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
+    }
+
+    const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+      const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+      setLeads(leadsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching leads:", error);
+      setLoading(false);
     });
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+        unsubscribeLeads();
     };
 
   }, [user, isInitialized]);
@@ -131,7 +123,8 @@ export default function DashboardPage() {
 
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
-    if (activeFilters.length === 0 || activeFilters.length === availableStatuses.length) return leads;
+    if (activeFilters.length === 0) return [];
+    if (activeFilters.length === availableStatuses.length) return leads;
     return leads.filter(lead => statusFilters[lead.status]);
   }, [leads, statusFilters, availableStatuses]);
 
