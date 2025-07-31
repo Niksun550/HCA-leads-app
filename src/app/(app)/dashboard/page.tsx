@@ -35,7 +35,7 @@ export default function DashboardPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   
-  const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({} as Record<LeadStatus, boolean>);
+  const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({});
 
   const availableStatuses = useMemo(() => {
     if (!user) return [];
@@ -43,14 +43,14 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (availableStatuses.length > 0) {
       const initialFilters = availableStatuses.reduce((acc, status) => {
         acc[status] = true;
         return acc;
       }, {} as Record<LeadStatus, boolean>);
       setStatusFilters(initialFilters);
     }
-  }, [user, availableStatuses]);
+  }, [availableStatuses]);
 
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
-    if (activeFilters.length === 0) return [];
+    if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
     if (activeFilters.length === availableStatuses.length) return leads;
     return leads.filter(lead => statusFilters[lead.status]);
   }, [leads, statusFilters, availableStatuses]);
@@ -195,11 +195,11 @@ export default function DashboardPage() {
         <ForecastingDashboard leads={filteredLeads} />
       ) : (
         <>
-          <StatCards leads={leads} />
+          <StatCards leads={filteredLeads} />
 
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-3">
-              <LeadsChart leads={leads} />
+              <LeadsChart leads={filteredLeads} />
             </div>
             <div className="md:col-span-2">
               <LeadsMap leads={filteredLeads} />

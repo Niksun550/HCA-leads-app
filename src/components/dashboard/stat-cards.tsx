@@ -15,7 +15,7 @@ export function StatCards({ leads }: StatCardsProps) {
     const totalLeads = leads.length;
     const totalKw = leads.reduce((acc, lead) => acc + (lead.kwRequirement || 0), 0);
     const closedLeads = leads.filter(lead => lead.status === 'Closed').length;
-    const proposalSent = leads.filter(lead => lead.status === 'Proposal Sent').length;
+    const proposalSent = leads.filter(lead => lead.status === 'Proposal Sent' || lead.status === 'Quotation Send').length;
 
     return [
       { title: 'Total Leads', value: totalLeads, icon: Users, color: 'text-primary' },

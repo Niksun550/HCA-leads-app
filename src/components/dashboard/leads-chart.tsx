@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -13,15 +14,19 @@ interface LeadsChartProps {
 export function LeadsChart({ leads }: LeadsChartProps) {
   const data = useMemo(() => {
     const statusCounts: { [key: string]: number } = {};
+    
+    // Initialize all possible statuses to ensure they appear on the chart
     leadStatuses.forEach(status => {
       statusCounts[status] = 0;
     });
 
+    // Count leads for each status
     leads.forEach(lead => {
       if (statusCounts[lead.status] !== undefined) {
         statusCounts[lead.status]++;
       }
     });
+    
     return Object.entries(statusCounts).map(([name, value]) => ({ name, count: value }));
   }, [leads]);
 
