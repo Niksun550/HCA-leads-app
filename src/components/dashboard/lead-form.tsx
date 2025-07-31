@@ -42,12 +42,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare } from "lucide-react";
+import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LeadChat } from "./lead-chat";
+import TaskForm from "@/components/tasks/task-form";
 
 interface LeadFormProps {
   isOpen: boolean;
@@ -82,6 +83,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   const [isLocating, setIsLocating] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -334,13 +336,22 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   };
   
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[800px] grid-rows-[auto_1fr] p-0 max-h-[90vh]">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="font-headline">{lead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
-          <DialogDescription>
-            {lead ? "Update the details for this lead." : "Fill in the details for the new lead."}
-          </DialogDescription>
+        <DialogHeader className="p-6 pb-0 flex flex-row items-start justify-between">
+            <div>
+                <DialogTitle className="font-headline">{lead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
+                <DialogDescription>
+                    {lead ? "Update the details for this lead." : "Fill in the details for the new lead."}
+                </DialogDescription>
+            </div>
+            {lead && (
+                <Button variant="outline" size="sm" onClick={() => setIsTaskFormOpen(true)}>
+                    <ListTodo className="mr-2" />
+                    Create Task
+                </Button>
+            )}
         </DialogHeader>
         <div className="grid md:grid-cols-2 overflow-hidden">
             <div className="overflow-y-auto pr-2">
@@ -584,5 +595,16 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         </div>
       </DialogContent>
     </Dialog>
+    {lead && (
+        <TaskForm 
+            isOpen={isTaskFormOpen}
+            setIsOpen={setIsTaskFormOpen}
+            task={null}
+            users={users}
+            leads={[lead]}
+            defaultLeadId={lead.id}
+        />
+    )}
+    </>
   );
 }

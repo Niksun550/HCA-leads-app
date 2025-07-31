@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +93,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
               <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')} onClick={onLinkClick}>
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
+              </NavLink>
+              <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
+                <CheckSquare className="h-5 w-5" />
+                Tasks
               </NavLink>
                <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick} unreadCount={unreadCount}>
                 <MessageSquare className="h-5 w-5" />

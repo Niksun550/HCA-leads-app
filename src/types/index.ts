@@ -84,3 +84,25 @@ export interface Conversation {
   updatedAt: Timestamp;
   unreadCounts: Record<string, number>;
 }
+
+export type TaskStatus = 'To Do' | 'In Progress' | 'Done' | 'Cancelled';
+export const taskStatuses: TaskStatus[] = ['To Do', 'In Progress', 'Done', 'Cancelled'];
+
+export type TaskPriority = 'High' | 'Medium' | 'Low';
+export const taskPriorities: TaskPriority[] = ['High', 'Medium', 'Low'];
+
+export interface Task {
+    id: string;
+    title: string;
+    description: string;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Timestamp;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+    assigneeId: string;
+    assigneeName: string;
+    leadId?: string | null;
+    leadCustomerName?: string | null;
+    createdBy: string;
+}
