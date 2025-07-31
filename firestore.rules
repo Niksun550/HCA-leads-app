@@ -3,51 +3,82 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
-    function isUserRole(role) {
-      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
-
-    function isUserRoleIn(roles) {
-      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    
+    function isUserRole(role) {
+      return getUserData(request.auth.uid).role == role;
     }
 
     match /users/{userId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isUserAuthenticated() && request.auth.uid == userId;
-    }
-
-    match /leads/{leadId} {
-      allow read: if isUserAuthenticated() && 
-                    (isUserRoleIn(['Admin', 'Viewer', 'Director']) || 
-                     request.auth.uid == resource.data.ownerId ||
-                     (isUserRole('Structure') && (request.auth.uid == resource.data.structureTeamMemberId || resource.data.status == 'Structure Pending')));
-      allow create: if isUserAuthenticated();
-      allow update: if isUserAuthenticated() && 
-                      (isUserRole('Admin') || 
-                       request.auth.uid == resource.data.ownerId || 
-                       (isUserRole('Structure') && request.auth.uid == resource.data.structureTeamMemberId));
+      allow list, read: if isUserAuthenticated();
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
       allow delete: if isUserRole('Admin');
     }
 
+    match /leads/{leadId} {
+        allow list: if isUserAuthenticated();
+        allow read: if isUserAuthenticated() && (
+            isUserRole('Admin') ||
+            isUserRole('Viewer') ||
+            isUserRole('Director') ||
+            resource.data.ownerId == request.auth.uid ||
+            (isUserRole('Structure') && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status == 'Structure Pending'))
+        );
+        allow create: if isUserAuthenticated() && (
+            isUserRole('Admin') ||
+            isUserRole('Sales Rep') ||
+            isUserRole('Director')
+        );
+        allow update: if isUserAuthenticated() && (
+            isUserRole('Admin') ||
+            isUserRole('Director') ||
+            resource.data.ownerId == request.auth.uid ||
+            (isUserRole('Structure') && resource.data.structureTeamMemberId == request.auth.uid)
+        );
+        allow delete: if isUserAuthenticated() && isUserRole('Admin');
+
+        match /messages/{messageId} {
+            allow read, write: if isUserAuthenticated() && (
+                isUserRole('Admin') ||
+                isUserRole('Director') ||
+                get(/databases/$(database)/documents/leads/$(leadId)).data.ownerId == request.auth.uid ||
+                (isUserRole('Structure') && get(/databases/$(database)/documents/leads/$(leadId)).data.structureTeamMemberId == request.auth.uid)
+            );
+        }
+    }
+    
     match /conversations/{conversationId} {
-      allow read, update: if isUserAuthenticated() && request.auth.uid in resource.data.participants;
-      allow create: if isUserAuthenticated(); 
+      allow read, update: if request.auth.uid in resource.data.participants;
+      allow create: if isUserAuthenticated();
       
       match /messages/{messageId} {
-        allow read, create: if isUserAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
       }
     }
 
     match /tasks/{taskId} {
-      allow read: if isUserAuthenticated() && (isUserRoleIn(['Admin', 'Director']) || request.auth.uid == resource.data.assigneeId);
+      allow read: if isUserAuthenticated() && (
+        isUserRole('Admin') || 
+        isUserRole('Director') || 
+        resource.data.assigneeId == request.auth.uid
+      );
       allow create: if isUserAuthenticated();
-      allow update: if isUserAuthenticated() && (isUserRole('Admin') || request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy);
-      allow delete: if isUserAuthenticated() && (isUserRole('Admin') || request.auth.uid == resource.data.createdBy);
+      allow update: if isUserAuthenticated() && (
+        isUserRole('Admin') || 
+        resource.data.createdBy == request.auth.uid
+      );
+      allow delete: if isUserAuthenticated() && (
+        isUserRole('Admin') || 
+        resource.data.createdBy == request.auth.uid
+      );
     }
   }
 }
