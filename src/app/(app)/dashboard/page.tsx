@@ -44,10 +44,12 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      const initialFilters: Partial<Record<LeadStatus, boolean>> = {};
-      availableStatuses.forEach(status => initialFilters[status] = true);
-      setStatusFilters(initialFilters as Record<LeadStatus, boolean>);
+    if (user && availableStatuses.length > 0) {
+      const initialFilters = availableStatuses.reduce((acc, status) => {
+        acc[status] = true;
+        return acc;
+      }, {} as Record<LeadStatus, boolean>);
+      setStatusFilters(initialFilters);
     }
   }, [user, availableStatuses]);
 
@@ -129,9 +131,9 @@ export default function DashboardPage() {
 
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
-    if (activeFilters.length === 0) return leads;
+    if (activeFilters.length === 0 || activeFilters.length === availableStatuses.length) return leads;
     return leads.filter(lead => statusFilters[lead.status]);
-  }, [leads, statusFilters]);
+  }, [leads, statusFilters, availableStatuses]);
 
   const handleExport = () => {
     const dataToExport = filteredLeads.map(lead => ({
@@ -156,7 +158,7 @@ export default function DashboardPage() {
   };
 
 
-  if (!isInitialized || loading || !user) {
+  if (!isInitialized || loading || !user || Object.keys(statusFilters).length === 0) {
     return (
        <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
@@ -210,11 +212,11 @@ export default function DashboardPage() {
         <ForecastingDashboard leads={filteredLeads} />
       ) : (
         <>
-          <StatCards leads={filteredLeads} />
+          <StatCards leads={leads} />
 
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-3">
-              <LeadsChart leads={filteredLeads} />
+              <LeadsChart leads={leads} />
             </div>
             <div className="md:col-span-2">
               <LeadsMap leads={filteredLeads} />

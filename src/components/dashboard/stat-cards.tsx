@@ -4,23 +4,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Lead } from '@/types';
 import { BarChart, Users, Zap, CheckCircle } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface StatCardsProps {
   leads: Lead[];
 }
 
 export function StatCards({ leads }: StatCardsProps) {
-  const totalLeads = leads.length;
-  const totalKw = leads.reduce((acc, lead) => acc + (lead.kwRequirement || 0), 0);
-  const closedLeads = leads.filter(lead => lead.status === 'Closed').length;
-  const proposalSent = leads.filter(lead => lead.status === 'Proposal Sent').length;
+  const stats = useMemo(() => {
+    const totalLeads = leads.length;
+    const totalKw = leads.reduce((acc, lead) => acc + (lead.kwRequirement || 0), 0);
+    const closedLeads = leads.filter(lead => lead.status === 'Closed').length;
+    const proposalSent = leads.filter(lead => lead.status === 'Proposal Sent').length;
 
-  const stats = [
-    { title: 'Total Leads', value: totalLeads, icon: Users, color: 'text-primary' },
-    { title: 'Total KW Requirement', value: `${totalKw.toLocaleString()} KW`, icon: Zap, color: 'text-accent' },
-    { title: 'Proposals Sent', value: proposalSent, icon: BarChart, color: 'text-yellow-500' },
-    { title: 'Leads Closed', value: closedLeads, icon: CheckCircle, color: 'text-green-500' },
-  ];
+    return [
+      { title: 'Total Leads', value: totalLeads, icon: Users, color: 'text-primary' },
+      { title: 'Total KW Requirement', value: `${totalKw.toLocaleString()} KW`, icon: Zap, color: 'text-accent' },
+      { title: 'Proposals Sent', value: proposalSent, icon: BarChart, color: 'text-yellow-500' },
+      { title: 'Leads Closed', value: closedLeads, icon: CheckCircle, color: 'text-green-500' },
+    ];
+  }, [leads]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
