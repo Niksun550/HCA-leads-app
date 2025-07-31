@@ -91,12 +91,17 @@ export const taskStatuses: TaskStatus[] = ['To Do', 'In Progress', 'Done', 'Canc
 export type TaskPriority = 'High' | 'Medium' | 'Low';
 export const taskPriorities: TaskPriority[] = ['High', 'Medium', 'Low'];
 
+export type TaskCategory = 'Visit' | 'Payment Collection' | 'Quotation' | 'Follow-up' | 'Other';
+export const taskCategories: TaskCategory[] = ['Visit', 'Payment Collection', 'Quotation', 'Follow-up', 'Other'];
+
+
 export interface Task {
     id: string;
     title: string;
     description: string;
     status: TaskStatus;
     priority: TaskPriority;
+    category: TaskCategory;
     dueDate: Timestamp;
     createdAt: Timestamp;
     updatedAt: Timestamp;

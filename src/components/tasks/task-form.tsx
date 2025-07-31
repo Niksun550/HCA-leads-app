@@ -9,7 +9,7 @@ import { addDoc, collection, doc, setDoc, Timestamp, updateDoc } from "firebase/
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, AppUser, Lead } from "@/types";
-import { taskStatuses, taskPriorities } from "@/types";
+import { taskStatuses, taskPriorities, taskCategories } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -57,6 +57,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   status: z.enum(taskStatuses),
   priority: z.enum(taskPriorities),
+  category: z.enum(taskCategories),
   dueDate: z.date({ required_error: "A due date is required." }),
   assigneeId: z.string().min(1, "Assignee is required."),
   leadId: z.string().nullable().optional(),
@@ -74,6 +75,7 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
       description: "",
       status: "To Do",
       priority: "Medium",
+      category: "Other",
       assigneeId: user?.uid,
       leadId: defaultLeadId || null,
     },
@@ -91,6 +93,7 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
         description: "",
         status: "To Do",
         priority: "Medium",
+        category: "Other",
         assigneeId: user?.uid || "",
         dueDate: new Date(),
         leadId: defaultLeadId || null,
@@ -119,6 +122,7 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
         description: values.description || "",
         status: values.status,
         priority: values.priority,
+        category: values.category,
         dueDate: Timestamp.fromDate(values.dueDate),
         assigneeId: values.assigneeId,
         assigneeName: assignee?.displayName || "Unknown",
@@ -175,12 +179,12 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField name="status" control={form.control} render={({ field }) => (
+                     <FormField name="category" control={form.control} render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Status</FormLabel>
+                        <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>{taskStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            <SelectContent>{taskCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
@@ -197,6 +201,16 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
                     )} />
                 </div>
                  <div className="grid grid-cols-2 gap-4">
+                     <FormField name="status" control={form.control} render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>{taskStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
                     <FormField name="dueDate" control={form.control} render={({ field }) => (
                         <FormItem className="flex flex-col">
                             <FormLabel>Due Date</FormLabel>
@@ -224,6 +238,8 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
                             <FormMessage />
                         </FormItem>
                     )} />
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
                     <FormField name="assigneeId" control={form.control} render={({ field }) => (
                         <FormItem>
                         <FormLabel>Assignee</FormLabel>
@@ -234,19 +250,19 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
                         <FormMessage />
                         </FormItem>
                     )} />
+                    <FormField name="leadId" control={form.control} render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Related Lead (Optional)</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(value || null)} value={field.value || undefined}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a lead" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {leads.map(l => <SelectItem key={l.id} value={l.id}>{l.customerName}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
                  </div>
-                 <FormField name="leadId" control={form.control} render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Related Lead (Optional)</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || undefined}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a lead" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            {leads.map(l => <SelectItem key={l.id} value={l.id}>{l.customerName}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
 
             </form>
         </Form>
