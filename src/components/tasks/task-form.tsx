@@ -238,10 +238,9 @@ export default function TaskForm({ isOpen, setIsOpen, task, users, leads, defaul
                  <FormField name="leadId" control={form.control} render={({ field }) => (
                     <FormItem>
                     <FormLabel>Related Lead (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <Select onValueChange={(value) => field.onChange(value === "none" ? null : value)} value={field.value || undefined}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a lead" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            <SelectItem value="">None</SelectItem>
                             {leads.map(l => <SelectItem key={l.id} value={l.id}>{l.customerName}</SelectItem>)}
                         </SelectContent>
                     </Select>
