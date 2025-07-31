@@ -34,39 +34,23 @@ export default function TasksPage() {
             return;
         }
 
-        // Fetch all users
+        // Fetch all users for assignee dropdown
         const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
             setAllUsers(snapshot.docs.map(doc => doc.data() as AppUser));
         });
 
-        // Fetch leads based on user role
-        let leadsQuery;
-        if (user.role === 'Admin' || user.role === 'Director') {
-            leadsQuery = query(collection(db, 'leads'));
-        } else if (user.role === 'Sales Rep') {
-            leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
-        } else if (user.role === 'Structure') {
-             leadsQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
-        } else {
-            leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid_user_id')); // No leads for others
-        }
-        
+        // Fetch leads assigned to the user for the "Related Lead" dropdown
+        const leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
         const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
             setAllLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
         }, (error) => {
             console.error("Error fetching leads for tasks:", error);
-            // Don't block UI for this, dropdown will just be empty
         });
         
 
-        // Fetch tasks assigned to the current user
-        let tasksQuery;
-        if (user.role === 'Admin' || user.role === 'Director') {
-            tasksQuery = query(collection(db, 'tasks'));
-        } else {
-            tasksQuery = query(collection(db, 'tasks'), where('assigneeId', '==', user.uid));
-        }
-
+        // Fetch tasks assigned to the current user ONLY
+        const tasksQuery = query(collection(db, 'tasks'), where('assigneeId', '==', user.uid));
+        
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
             const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
             tasksData.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
