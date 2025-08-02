@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +97,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
               <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
                 <CheckSquare className="h-5 w-5" />
                 Tasks
+              </NavLink>
+               <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
+                <LayoutGrid className="h-5 w-5" />
+                Board
               </NavLink>
                <NavLink href="/planner" isActive={pathname.startsWith('/planner')} onClick={onLinkClick}>
                 <CalendarDays className="h-5 w-5" />
