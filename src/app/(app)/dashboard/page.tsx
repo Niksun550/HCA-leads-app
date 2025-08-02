@@ -221,7 +221,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-3">
-              <ClientLeadsChart leads={filteredLeads} />
+              <ClientLeadsChart leads={filteredLeads} key={filteredLeads.map(l => l.id).join(',')} />
             </div>
             <div className="md:col-span-2">
               <LeadsMap leads={filteredLeads} />

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bar, ComposedChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Lead } from '@/types';
 import { useMemo } from 'react';
@@ -36,14 +36,13 @@ export default function LeadsChart({ leads }: LeadsChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart
-                layout="vertical"
+            <BarChart
                 data={data}
-                margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
+                margin={{ top: 5, right: 20, bottom: 5, left: -10 }}
             >
-                <CartesianGrid stroke="#f5f5f5" />
-                <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                <YAxis dataKey="name" type="category" scale="band" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={110} />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} angle={-45} textAnchor="end" height={60} interval={0} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
                     background: "hsl(var(--background))",
@@ -52,8 +51,8 @@ export default function LeadsChart({ leads }: LeadsChartProps) {
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: "14px" }}/>
-                <Bar dataKey="count" barSize={20} fill="hsl(var(--primary))" name="Lead Count" />
-            </ComposedChart>
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count" />
+            </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
