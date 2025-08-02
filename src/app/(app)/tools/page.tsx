@@ -62,6 +62,7 @@ export default function ToolsPage() {
         }
 
         setLoading(true);
+        setSelectedLeads({}); // Reset selection when filter changes
         const { db } = getFirebaseServices();
         if (!db) {
             setLoading(false);
@@ -377,5 +378,3 @@ export default function ToolsPage() {
         </div>
     );
 }
-
-    
