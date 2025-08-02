@@ -225,7 +225,7 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-           {user.role === 'Admin' || user.role === 'Director' ? (
+           {user.role === 'Admin' || user.role === 'Director' || user.role === 'Sales Rep' ? (
               <Button variant="outline" onClick={() => setIsReengageDialogOpen(true)} disabled={!droppedLeadsSelected}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 Re-engage
@@ -292,4 +292,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
