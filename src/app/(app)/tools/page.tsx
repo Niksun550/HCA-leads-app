@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare } from "lucide-react";
+import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -146,7 +146,7 @@ export default function ToolsPage() {
     const handleGenerateAIWelcome = async () => {
         setIsGenerating(true);
         try {
-            const result = await generateWelcomeMessage({ customerName: "Customer" }); // Generic welcome
+            const result = await generateWelcomeMessage({ customerName: "{{customerName}}" }); 
             setMessage(result.welcomeMessage);
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Generation Failed', description: error.message || 'An unexpected error occurred.' });
@@ -176,8 +176,10 @@ export default function ToolsPage() {
             }
 
             let personalizedMessage = message.replace(/{{customerName}}/g, lead.customerName);
+            
             if (senderNumber) {
-                personalizedMessage += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}.\nReply to: ${senderNumber}`;
+                const replyLink = `https://wa.me/${senderNumber}`;
+                personalizedMessage += `\n\nFor more details, click here to reply: ${replyLink}`;
             }
             
             const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(personalizedMessage)}`;
@@ -268,7 +270,7 @@ export default function ToolsPage() {
                                <div className="flex items-center justify-between">
                                  <Label htmlFor="campaign-message">Message Content</Label>
                                   <Button variant="ghost" size="sm" onClick={handleGenerateAIWelcome} disabled={isGenerating}>
-                                      {isGenerating ? <LoaderCircle className="animate-spin" /> : <Wand2 />}
+                                      {isGenerating ? <LoaderCircle className="animate-spin h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
                                       AI Generate
                                   </Button>
                                </div>
@@ -279,7 +281,7 @@ export default function ToolsPage() {
                                     onChange={(e) => setMessage(e.target.value)}
                                     className="min-h-[120px]"
                                 />
-                                <p className="text-xs text-muted-foreground">The placeholder `{"{{customerName}}".replace(/{/g, '{{').replace(/}/g, '}}')}` will be replaced with each customer's name.</p>
+                                <p className="text-xs text-muted-foreground">The placeholder `{"{{customerName}}"}` will be replaced with each customer's name.</p>
 
                                 <div className="space-y-2 pt-2">
                                     <Label htmlFor="image-upload-main">Attach Image/Flyer (Optional)</Label>
@@ -318,7 +320,15 @@ export default function ToolsPage() {
                                 <Button onClick={handleSendWhatsApp} disabled={selectedLeadIds.length === 0 || !message}>
                                     <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
                                 </Button>
-                                <p className="text-xs text-muted-foreground">Note: If you attached an image, you must manually send it in each WhatsApp chat that opens.</p>
+                                {image && (
+                                     <Alert variant="default" className="mt-4 text-left">
+                                        <Info className="h-4 w-4" />
+                                        <AlertTitle>Manual Step Required</AlertTitle>
+                                        <AlertDescription>
+                                            The text will be pre-filled. You must attach the image manually in each WhatsApp chat that opens.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
                             </div>
                         </div>
                     </div>
