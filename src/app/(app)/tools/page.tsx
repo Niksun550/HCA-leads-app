@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import Image from 'next/image';
 
@@ -30,15 +29,6 @@ interface CampaignLead {
     customerName: string;
     mobileNumber?: string;
 }
-
-interface GeneratedContent {
-    leadId: string;
-    customerName: string;
-    mobileNumber?: string;
-    text: string;
-}
-
-type CampaignType = "ai_welcome" | "custom_text" | "custom_image";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -55,13 +45,11 @@ export default function ToolsPage() {
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedContent, setGeneratedContent] = useState<GeneratedContent[]>([]);
-    const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
     
-    const [campaignType, setCampaignType] = useState<CampaignType>("ai_welcome");
-    const [customMessage, setCustomMessage] = useState("");
-    const [customImage, setCustomImage] = useState<string | null>(null);
+    const [message, setMessage] = useState("");
+    const [image, setImage] = useState<string | null>(null);
     const [senderNumber, setSenderNumber] = useState("");
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!isInitialized || !user) {
@@ -139,7 +127,7 @@ export default function ToolsPage() {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setCustomImage(reader.result as string);
+                setImage(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -153,71 +141,39 @@ export default function ToolsPage() {
     const selectedLeadIds = Object.keys(selectedLeads).filter(id => selectedLeads[id]);
     const leadsToProcess = allLeadsForCampaign.filter(lead => selectedLeadIds.includes(lead.id));
 
-    const handleGenerate = async () => {
-        if (leadsToProcess.length === 0) {
-            toast({ variant: 'destructive', title: 'No customers selected', description: 'Please select at least one customer to target.' });
-            return;
-        }
-
+    const handleGenerateAIWelcome = async () => {
         setIsGenerating(true);
-        setGeneratedContent([]);
         try {
-            if (campaignType === 'ai_welcome') {
-                const promises = leadsToProcess.map(lead => generateWelcomeMessage({ customerName: lead.customerName }));
-                const results = await Promise.all(promises);
-                const content = results.map((result, index) => {
-                    let text = result.welcomeMessage;
-                    if(senderNumber) {
-                        text += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
-                    }
-                    return {
-                        leadId: leadsToProcess[index].id,
-                        customerName: leadsToProcess[index].customerName,
-                        mobileNumber: leadsToProcess[index].mobileNumber,
-                        text: text,
-                    }
-                });
-                setGeneratedContent(content);
-            }
+            const result = await generateWelcomeMessage({ customerName: "Customer" }); // Generic welcome
+            setMessage(result.welcomeMessage);
         } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Generation Failed',
-                description: error.message || 'An unexpected error occurred.',
-            });
+             toast({ variant: 'destructive', title: 'Generation Failed', description: error.message || 'An unexpected error occurred.' });
         } finally {
             setIsGenerating(false);
         }
     };
     
-    const handleCopy = (text: string, leadId: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedStates(prev => ({ ...prev, [leadId]: true }));
-        setTimeout(() => setCopiedStates(prev => ({ ...prev, [leadId]: false })), 2000);
-    };
-
-    const handleSendWhatsApp = (mobileNumber: string, text: string) => {
-        if (!mobileNumber) {
-            toast({ variant: 'destructive', title: 'No mobile number', description: 'This contact does not have a mobile number.'});
+    const handleSendWhatsApp = () => {
+        if (leadsToProcess.length === 0) {
+            toast({ variant: 'destructive', title: 'No customers selected', description: 'Please select at least one customer to target.' });
             return;
         }
-        const url = `https://wa.me/${mobileNumber}?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    };
-
-    const handleBulkWhatsApp = (text: string) => {
-        if (!text) {
-             toast({ variant: 'destructive', title: 'No Message', description: 'Please write a message to send.'});
+        if (!message) {
+            toast({ variant: 'destructive', title: 'No message', description: 'Please write a message to send.' });
             return;
         }
-        let messageToSend = text;
-        if(senderNumber) {
-            messageToSend += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
-        }
+
         leadsToProcess.forEach(lead => {
-            if (lead.mobileNumber) {
-                handleSendWhatsApp(lead.mobileNumber, messageToSend);
+            if (!lead.mobileNumber) return;
+
+            // Replace placeholder and add sender info
+            let personalizedMessage = message.replace(/{{customerName}}/g, lead.customerName);
+            if (senderNumber) {
+                personalizedMessage += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
             }
+            
+            const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(personalizedMessage)}`;
+            window.open(url, '_blank');
         });
     };
     
@@ -239,47 +195,6 @@ export default function ToolsPage() {
         </div>
     );
 
-    const renderResults = () => {
-        if (campaignType === 'ai_welcome') {
-            return (
-                <div className="space-y-4">
-                    {generatedContent.map(content => (
-                        <Alert key={content.leadId}>
-                            <AlertTitle className="flex items-center justify-between">
-                                For {content.customerName}
-                                <div className="flex items-center">
-                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleSendWhatsApp(content.mobileNumber!, content.text)} disabled={!content.mobileNumber}>
-                                        <WhatsAppIcon />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopy(content.text, content.leadId)}>
-                                        {copiedStates[content.leadId] ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
-                                    </Button>
-                                </div>
-                            </AlertTitle>
-                            <AlertDescription className="whitespace-pre-wrap">{content.text}</AlertDescription>
-                        </Alert>
-                    ))}
-                </div>
-            );
-        }
-        if ((campaignType === 'custom_text' && customMessage) || (campaignType === 'custom_image' && customImage)) {
-            return (
-                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-green-500/5 rounded-lg">
-                    <MessageSquare className="h-12 w-12 mb-2 text-green-600" />
-                    <p className="font-semibold text-green-700">Content Ready!</p>
-                    <p>Click the button below to send your content to the {leadsToProcess.length} selected customer(s).</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-                <Wand2 className="h-12 w-12 mb-2" />
-                <p>Your campaign content will appear here.</p>
-            </div>
-        )
-    };
-
     return (
         <div className="py-4 space-y-8">
             <header>
@@ -290,12 +205,15 @@ export default function ToolsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Marketing Campaign Builder</CardTitle>
-                    <CardDescription>Engage customers with personalized campaigns using AI, custom text, or images.</CardDescription>
+                    <CardDescription>Engage customers with personalized campaigns using text and images.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid lg:grid-cols-2 gap-12">
                     <div className="space-y-6">
                         <div>
                             <h3 className="font-semibold mb-2 text-lg">1. Select Customers</h3>
+                            <p className="text-sm text-muted-foreground mb-2">
+                                Choose from your new leads or upload a list. Total selected: <span className="font-bold text-primary">{selectedLeadIds.length}</span>
+                            </p>
                             <Tabs defaultValue="database">
                                  <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="database">From Database</TabsTrigger>
@@ -320,7 +238,7 @@ export default function ToolsPage() {
                                      <div className="rounded-md border p-4 mt-2 space-y-2">
                                         <Label htmlFor="file-upload">Upload Excel File</Label>
                                         <Input id="file-upload" type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} />
-                                        <p className="text-xs text-muted-foreground">File must have a header with a 'name' and 'mobile'/'phone' column.</p>
+                                        <p className="text-xs text-muted-foreground">File must have a header with 'name' and 'mobile'/'phone' columns.</p>
                                     </div>
                                     <ScrollArea className="h-48 mt-2">
                                          {uploadedLeads.length > 0 ? (
@@ -334,77 +252,65 @@ export default function ToolsPage() {
                                 </TabsContent>
                             </Tabs>
                         </div>
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-lg">2. Choose Content Type</h3>
-                            <RadioGroup value={campaignType} onValueChange={(v) => setCampaignType(v as CampaignType)} className="p-4 border rounded-md grid md:grid-cols-3 gap-4">
-                                <Label htmlFor="type-ai" className="flex flex-col items-center gap-2 p-2 rounded-md border border-transparent has-[:checked]:border-primary has-[:checked]:bg-primary/5 cursor-pointer">
-                                    <RadioGroupItem value="ai_welcome" id="type-ai" className="sr-only" />
-                                    <Bot className="h-8 w-8" />
-                                    <span className="text-center font-normal">AI Welcome Message</span>
-                                </Label>
-                                <Label htmlFor="type-text" className="flex flex-col items-center gap-2 p-2 rounded-md border border-transparent has-[:checked]:border-primary has-[:checked]:bg-primary/5 cursor-pointer">
-                                    <RadioGroupItem value="custom_text" id="type-text" className="sr-only" />
-                                    <Type className="h-8 w-8" />
-                                    <span className="text-center font-normal">Custom Text</span>
-                                </Label>
-                                <Label htmlFor="type-image" className="flex flex-col items-center gap-2 p-2 rounded-md border border-transparent has-[:checked]:border-primary has-[:checked]:bg-primary/5 cursor-pointer">
-                                    <RadioGroupItem value="custom_image" id="type-image" className="sr-only" />
-                                    <ImageIcon className="h-8 w-8" />
-                                    <span className="text-center font-normal">Image / Flyer</span>
-                                </Label>
-                            </RadioGroup>
-                             
-                             <div>
-                                <Label htmlFor="sender-number">Your WhatsApp Number (Optional)</Label>
-                                <Input 
-                                    id="sender-number"
-                                    type="tel"
-                                    placeholder="e.g., 919876543210"
-                                    value={senderNumber}
-                                    onChange={(e) => setSenderNumber(e.target.value.replace(/\D/g, ''))}
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">Include country code without '+' or '00'.</p>
-                             </div>
-
-                             {campaignType === 'ai_welcome' && (
-                                <Button onClick={handleGenerate} disabled={isGenerating || selectedLeadIds.length === 0} className="mt-4 w-full">
-                                    {isGenerating ? <LoaderCircle className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
-                                    Generate for {selectedLeadIds.length} customer(s)
-                                </Button>
-                             )}
-                              {campaignType === 'custom_text' && (
-                                <div className="mt-4 space-y-2">
-                                    <Textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} placeholder="Write your message here..." className="min-h-[120px]" />
-                                    <Button onClick={() => handleBulkWhatsApp(customMessage)} disabled={selectedLeadIds.length === 0} className="w-full">
-                                        <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
-                                    </Button>
-                                </div>
-                              )}
-                              {campaignType === 'custom_image' && (
-                                <div className="mt-4 space-y-2">
-                                    <Input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} />
-                                     <Button onClick={() => handleBulkWhatsApp("Please see attached image.")} disabled={selectedLeadIds.length === 0 || !customImage} className="w-full">
-                                        <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
-                                    </Button>
-                                    <p className="text-xs text-muted-foreground">Note: Image must be attached manually in WhatsApp after the chat opens.</p>
-                                </div>
-                              )}
-                        </div>
                     </div>
                     <div className="space-y-6">
+                         <div>
+                            <h3 className="font-semibold mb-2 text-lg">2. Compose Your Message</h3>
+                             <div className="space-y-2">
+                               <div className="flex items-center justify-between">
+                                 <Label htmlFor="campaign-message">Message Content</Label>
+                                  <Button variant="ghost" size="sm" onClick={handleGenerateAIWelcome} disabled={isGenerating}>
+                                      {isGenerating ? <LoaderCircle className="animate-spin" /> : <Wand2 />}
+                                      AI Generate
+                                  </Button>
+                               </div>
+                                <Textarea
+                                    id="campaign-message"
+                                    placeholder="Write your message here... Use {{customerName}} for personalization."
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    className="min-h-[120px]"
+                                />
+                                <p className="text-xs text-muted-foreground">The placeholder `{{customerName}}` will be replaced with each customer's name.</p>
+
+                                <div className="space-y-2 pt-2">
+                                    <Label htmlFor="image-upload-main">Attach Image/Flyer (Optional)</Label>
+                                    <Input id="image-upload-main" type="file" accept="image/*" onChange={handleImageUpload} />
+                                </div>
+                                
+                                <div className="space-y-2 pt-2">
+                                    <Label htmlFor="sender-number">Your WhatsApp Number (For Replies)</Label>
+                                    <Input 
+                                        id="sender-number"
+                                        type="tel"
+                                        placeholder="e.g., 919876543210"
+                                        value={senderNumber}
+                                        onChange={(e) => setSenderNumber(e.target.value.replace(/\D/g, ''))}
+                                    />
+                                    <p className="text-xs text-muted-foreground">Include country code without '+' or '00'.</p>
+                                </div>
+                             </div>
+                        </div>
                         <div>
-                             <h3 className="font-semibold mb-2 text-lg">3. Review & Use</h3>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                  Use the buttons below to send the content to your customers via your preferred communication channel (e.g., SMS, WhatsApp, Email).
-                              </p>
-                             <div className="min-h-[24rem] rounded-md border p-4 bg-muted/30">
-                                {isGenerating ? (
-                                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                                        <LoaderCircle className="animate-spin h-8 w-8" />
-                                    </div>
-                                ) : (
-                                    renderResults()
+                             <h3 className="font-semibold mb-2 text-lg">3. Send Campaign</h3>
+                             <div className="p-4 border-dashed border-2 rounded-lg text-center space-y-4">
+                                <div>
+                                    <p className="font-medium">Ready to Launch?</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        This will open WhatsApp on your device for each selected customer.
+                                    </p>
+                                </div>
+                                
+                                {image && (
+                                     <div className="w-24 h-24 mx-auto relative rounded-md border overflow-hidden">
+                                         <Image src={image} alt="Uploaded preview" layout="fill" objectFit="cover" />
+                                     </div>
                                 )}
+                                
+                                <Button onClick={handleSendWhatsApp} disabled={selectedLeadIds.length === 0 || !message}>
+                                    <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
+                                </Button>
+                                <p className="text-xs text-muted-foreground">Note: If you attached an image, you must manually send it in each WhatsApp chat that opens.</p>
                             </div>
                         </div>
                     </div>
@@ -413,3 +319,5 @@ export default function ToolsPage() {
         </div>
     );
 }
+
+    
