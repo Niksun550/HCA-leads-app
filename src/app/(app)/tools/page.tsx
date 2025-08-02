@@ -328,7 +328,10 @@ export default function ToolsPage() {
                     <div className="space-y-6">
                         <div>
                              <h3 className="font-semibold mb-2 text-lg">3. Review & Use</h3>
-                             <div className="min-h-[26rem] rounded-md border p-4 bg-muted/30">
+                              <p className="text-sm text-muted-foreground mb-2">
+                                  There is no "Send" button. Please copy/download the generated content and send it to your customers via your preferred communication channel (e.g., SMS, WhatsApp, Email).
+                              </p>
+                             <div className="min-h-[24rem] rounded-md border p-4 bg-muted/30">
                                 {isGenerating ? (
                                     <div className="flex items-center justify-center h-full text-muted-foreground">
                                         <LoaderCircle className="animate-spin h-8 w-8" />
@@ -344,5 +347,3 @@ export default function ToolsPage() {
         </div>
     );
 }
-
-    
