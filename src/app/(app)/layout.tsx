@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -21,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +96,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
               <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
                 <CheckSquare className="h-5 w-5" />
                 Tasks
+              </NavLink>
+              <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
+                <Wrench className="h-5 w-5" />
+                Tools
               </NavLink>
                <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
                 <LayoutGrid className="h-5 w-5" />
