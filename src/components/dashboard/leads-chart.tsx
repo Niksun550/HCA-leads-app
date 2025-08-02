@@ -65,7 +65,7 @@ export function LeadsChart({ leads }: LeadsChartProps) {
               }}
             />
             <Legend wrapperStyle={{ fontSize: "14px" }}/>
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count" />
+            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count" key="name" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
