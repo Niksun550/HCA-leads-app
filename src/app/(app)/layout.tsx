@@ -282,7 +282,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="grid min-h-screen w-full sm:grid-cols-[256px_1fr]">
+    <div className="grid min-h-screen w-full">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
         <SidebarContent />
       </aside>
@@ -301,3 +301,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    
