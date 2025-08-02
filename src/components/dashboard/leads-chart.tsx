@@ -31,7 +31,7 @@ export function LeadsChart({ leads }: LeadsChartProps) {
   }, [leads]);
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Leads by Status</CardTitle>
         <CardDescription>A summary of your current sales pipeline.</CardDescription>

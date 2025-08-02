@@ -94,7 +94,7 @@ export function ForecastingDashboard({ leads }: ForecastingDashboardProps) {
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-            <Card key={stat.title} className="shadow-sm hover:shadow-md transition-shadow duration-300">
+            <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                 <stat.icon className={`h-5 w-5 text-muted-foreground ${stat.color}`} />
@@ -106,7 +106,7 @@ export function ForecastingDashboard({ leads }: ForecastingDashboardProps) {
             </Card>
         ))}
       </div>
-       <Card className="shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
+       <Card>
         <CardHeader>
           <CardTitle>Monthly Pipeline (KW)</CardTitle>
           <CardDescription>Total KW of leads created vs. closed each month.</CardDescription>
