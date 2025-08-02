@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Task, TaskPriority, TaskCategory } from "@/types";
+import type { Task, TaskPriority, TaskCategory, AppUser } from "@/types";
 import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks } from 'date-fns';
 
 import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
@@ -34,6 +33,7 @@ const categoryIcons: Record<TaskCategory, React.ReactNode> = {
 export default function PlannerPage() {
     const { user, isInitialized } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [allUsers, setAllUsers] = useState<AppUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekDates, setWeekDates] = useState<Date[]>([]);
@@ -45,6 +45,22 @@ export default function PlannerPage() {
         const dates = Array.from({ length: 7 }).map((_, i) => addDays(start, i));
         setWeekDates(dates);
     }, [currentDate]);
+    
+     useEffect(() => {
+        if (!isInitialized || !user) return;
+        
+        const { db } = getFirebaseServices();
+        if (!db) return;
+        
+        const fetchUsers = async () => {
+             const usersCollection = collection(db, 'users');
+             const usersSnapshot = await getDocs(usersCollection);
+             const usersData = usersSnapshot.docs.map(doc => doc.data() as AppUser);
+             setAllUsers(usersData);
+        };
+        
+        fetchUsers();
+    }, [isInitialized, user]);
 
     useEffect(() => {
         if (!isInitialized || !user || weekDates.length === 0) {
@@ -181,7 +197,7 @@ export default function PlannerPage() {
                 isOpen={isTaskFormOpen}
                 setIsOpen={setIsTaskFormOpen}
                 task={selectedTask}
-                users={[]}
+                users={allUsers}
                 leads={[]}
             />
         </div>
