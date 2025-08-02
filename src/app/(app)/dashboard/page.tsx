@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, onSnapshot, query, where, getDocs, or } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -114,9 +114,9 @@ export default function DashboardPage() {
     setIsFormOpen(true);
   };
   
-  const handleSelectionChange = (newSelectedLeads: Lead[]) => {
+  const handleSelectionChange = useCallback((newSelectedLeads: Lead[]) => {
     setSelectedLeads(newSelectedLeads);
-  };
+  }, []);
   
   const droppedLeadsSelected = useMemo(() => {
     return selectedLeads.length > 0 && selectedLeads.every(l => l.status === 'Dropped');
