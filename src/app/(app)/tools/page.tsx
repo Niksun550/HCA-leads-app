@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
@@ -49,6 +49,8 @@ export default function ToolsPage() {
     const [message, setMessage] = useState("");
     const [image, setImage] = useState<string | null>(null);
     const [senderNumber, setSenderNumber] = useState("");
+    const [copied, setCopied] = useState(false);
+
 
     useEffect(() => {
         if (!isInitialized || !user) {
@@ -155,7 +157,7 @@ export default function ToolsPage() {
         }
     };
     
-    const handleSendWhatsApp = () => {
+    const handleBulkWhatsApp = useCallback(() => {
         if (leadsToProcess.length === 0) {
             toast({ variant: 'destructive', title: 'No customers selected', description: 'Please select at least one customer to target.' });
             return;
@@ -175,7 +177,7 @@ export default function ToolsPage() {
                 return;
             }
 
-            let personalizedMessage = message.replace(/{{customerName}}/g, lead.customerName);
+            let personalizedMessage = message.replace(/{{customerName}}/gi, lead.customerName);
             
             if (senderNumber) {
                 const replyLink = `https://wa.me/${senderNumber}`;
@@ -185,7 +187,8 @@ export default function ToolsPage() {
             const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(personalizedMessage)}`;
             window.open(url, '_blank');
         });
-    };
+    }, [leadsToProcess, message, senderNumber, toast]);
+
     
     const LeadCheckboxList = ({ leads }: { leads: CampaignLead[] }) => (
         <div className="space-y-2">
@@ -317,7 +320,7 @@ export default function ToolsPage() {
                                      </div>
                                 )}
                                 
-                                <Button onClick={handleSendWhatsApp} disabled={selectedLeadIds.length === 0 || !message}>
+                                <Button onClick={handleBulkWhatsApp} disabled={selectedLeadIds.length === 0 || !message}>
                                     <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
                                 </Button>
                                 {image && (
@@ -337,3 +340,5 @@ export default function ToolsPage() {
         </div>
     );
 }
+
+    
