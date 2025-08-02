@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, LoaderCircle, Clipboard, ClipboardCheck, Download } from 'lucide-react';
 import { reengageLead } from '@/ai/flows/reengage-flow';
 import { generateMarketingImage } from '@/ai/flows/generate-image-flow';
@@ -39,7 +40,7 @@ interface GeneratedImageContent {
     imageUrl: string;
 }
 
-type CampaignType = "message" | "image";
+type CampaignType = "ai_message" | "ai_image" | "custom_message";
 
 export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDialogProps) {
     const { toast } = useToast();
@@ -47,7 +48,10 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
     const [generatedText, setGeneratedText] = useState<GeneratedTextContent[] | null>(null);
     const [generatedImages, setGeneratedImages] = useState<GeneratedImageContent[] | null>(null);
     const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
-    const [campaignType, setCampaignType] = useState<CampaignType>("message");
+    const [campaignType, setCampaignType] = useState<CampaignType>("ai_message");
+    const [customMessage, setCustomMessage] = useState("");
+    const [isCustomMessageCopied, setIsCustomMessageCopied] = useState(false);
+
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -55,7 +59,7 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
         setGeneratedImages(null);
         
         try {
-            if (campaignType === 'message') {
+            if (campaignType === 'ai_message') {
                 const promises = leads.map(lead => 
                     reengageLead({ customerName: lead.customerName, propertyType: lead.propertyType })
                 );
@@ -66,7 +70,7 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
                     text: result.reengagementMessage,
                 }));
                 setGeneratedText(content);
-            } else if (campaignType === 'image') {
+            } else if (campaignType === 'ai_image') {
                 const promises = leads.map(lead => 
                     generateMarketingImage({ propertyType: lead.propertyType })
                 );
@@ -96,12 +100,22 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
             setCopiedStates(prev => ({ ...prev, [customerId]: false }));
         }, 2000);
     };
+
+    const handleCopyCustomMessage = () => {
+        navigator.clipboard.writeText(customMessage);
+        setIsCustomMessageCopied(true);
+        setTimeout(() => {
+            setIsCustomMessageCopied(false);
+        }, 2000);
+    };
     
     const resetState = () => {
         setGeneratedText(null);
         setGeneratedImages(null);
         setIsGenerating(false);
         setCopiedStates({});
+        setCustomMessage("");
+        setIsCustomMessageCopied(false);
     }
 
   return (
@@ -120,19 +134,45 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
         </DialogHeader>
         
         <div className="py-4 space-y-4">
-            <RadioGroup defaultValue="message" onValueChange={(value: CampaignType) => {
+            <RadioGroup defaultValue="ai_message" onValueChange={(value: CampaignType) => {
                 setCampaignType(value);
                 resetState();
             }}>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="message" id="r1" />
-                <Label htmlFor="r1">Re-engagement Message</Label>
+                <RadioGroupItem value="ai_message" id="r1" />
+                <Label htmlFor="r1">AI Generated Message</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="image" id="r2" />
-                <Label htmlFor="r2">Marketing Image</Label>
+                <RadioGroupItem value="ai_image" id="r2" />
+                <Label htmlFor="r2">AI Generated Image</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom_message" id="r3" />
+                <Label htmlFor="r3">Custom Message</Label>
               </div>
             </RadioGroup>
+
+            {campaignType === 'custom_message' && (
+                <div className="space-y-2">
+                    <Label htmlFor="custom-message-textarea">Your Message</Label>
+                    <Textarea 
+                        id="custom-message-textarea"
+                        value={customMessage}
+                        onChange={(e) => setCustomMessage(e.target.value)}
+                        placeholder="Type the message you want to send to all selected leads..."
+                        className="min-h-[100px]"
+                    />
+                     <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleCopyCustomMessage}
+                        disabled={!customMessage}
+                    >
+                        {isCustomMessageCopied ? <ClipboardCheck className="mr-2" /> : <Clipboard className="mr-2" />}
+                        Copy Message
+                    </Button>
+                </div>
+            )}
 
              {isGenerating && (
                 <div className="flex items-center justify-center p-8">
@@ -189,10 +229,12 @@ export default function ReengageDialog({ isOpen, setIsOpen, leads }: ReengageDia
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleGenerate} disabled={isGenerating || leads.length === 0}>
-            {isGenerating ? <LoaderCircle className="mr-2" /> : <Sparkles className="mr-2" />}
-            {generatedText || generatedImages ? "Regenerate" : "Generate"}
-          </Button>
+           {campaignType !== 'custom_message' && (
+              <Button onClick={handleGenerate} disabled={isGenerating || leads.length === 0}>
+                {isGenerating ? <LoaderCircle className="mr-2" /> : <Sparkles className="mr-2" />}
+                {generatedText || generatedImages ? "Regenerate" : "Generate"}
+              </Button>
+           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
