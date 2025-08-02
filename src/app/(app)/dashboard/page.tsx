@@ -7,13 +7,14 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsChart } from '@/components/dashboard/leads-chart';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
 import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
+import ReengageDialog from '@/components/dashboard/reengage-dialog';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -34,8 +35,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({});
+  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [isReengageDialogOpen, setIsReengageDialogOpen] = useState(false);
+
 
   const availableStatuses = useMemo(() => {
     if (!user) return [];
@@ -110,6 +113,14 @@ export default function DashboardPage() {
     setSelectedLead(lead);
     setIsFormOpen(true);
   };
+  
+  const handleSelectionChange = (newSelectedLeads: Lead[]) => {
+    setSelectedLeads(newSelectedLeads);
+  };
+  
+  const droppedLeadsSelected = useMemo(() => {
+    return selectedLeads.length > 0 && selectedLeads.every(l => l.status === 'Dropped');
+  }, [selectedLeads]);
 
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
@@ -178,6 +189,12 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+           {user.role === 'Admin' || user.role === 'Director' ? (
+              <Button variant="outline" onClick={() => setIsReengageDialogOpen(true)} disabled={!droppedLeadsSelected}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Re-engage
+              </Button>
+           ) : null}
           <Button variant="outline" onClick={handleExport} disabled={filteredLeads.length === 0}>
              <FileSpreadsheet className="mr-2 h-4 w-4" />
              Export
@@ -206,7 +223,7 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
+          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} onSelectionChange={handleSelectionChange} />
         </>
       )}
 
@@ -216,8 +233,13 @@ export default function DashboardPage() {
         lead={selectedLead}
         users={allUsers}
       />
+      
+      <ReengageDialog
+        isOpen={isReengageDialogOpen}
+        setIsOpen={setIsReengageDialogOpen}
+        leads={selectedLeads}
+       />
+
     </div>
   );
 }
-
-    
