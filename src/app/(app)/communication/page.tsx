@@ -21,7 +21,8 @@ export default function CommunicationPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
   const isMobile = useIsMobile();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const conversationsRef = useRef<Conversation[]>([]);
@@ -32,12 +33,17 @@ export default function CommunicationPage() {
     const { db } = getFirebaseServices();
     if (!db || !user) return;
 
+    setUsersLoading(true);
     const usersQuery = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       const usersData = snapshot.docs
         .map(doc => doc.data() as AppUser)
         .filter(u => u.uid !== user.uid);
       setUsers(usersData);
+      setUsersLoading(false);
+    }, (error) => {
+        console.error("Error fetching users:", error);
+        setUsersLoading(false);
     });
 
     return () => unsubscribeUsers();
@@ -48,7 +54,7 @@ export default function CommunicationPage() {
     const { db } = getFirebaseServices();
     if (!db) return;
     
-    setLoading(true);
+    setConversationsLoading(true);
     const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
@@ -81,14 +87,14 @@ export default function CommunicationPage() {
       incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
       setConversations(incomingConvs);
       conversationsRef.current = incomingConvs;
-      setLoading(false);
+      setConversationsLoading(false);
       if (isInitialLoadRef.current) {
         isInitialLoadRef.current = false;
       }
 
     }, (error) => {
       console.error("Error fetching conversations:", error);
-      setLoading(false);
+      setConversationsLoading(false);
     });
 
     return () => {
@@ -157,7 +163,8 @@ export default function CommunicationPage() {
                 onSelectUser={handleSelectUser}
                 onSelectConversation={handleSelectConversation}
                 selectedConversationId={selectedConversation?.id}
-                loading={loading}
+                usersLoading={usersLoading || isCreatingConversation}
+                conversationsLoading={conversationsLoading || isCreatingConversation}
               />
           ) : (
              <ChatWindow
@@ -183,7 +190,8 @@ export default function CommunicationPage() {
               onSelectUser={handleSelectUser}
               onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversation?.id}
-              loading={loading || isCreatingConversation}
+              usersLoading={usersLoading || isCreatingConversation}
+              conversationsLoading={conversationsLoading || isCreatingConversation}
             />
         </ResizablePanel>
         <ResizableHandle withHandle />
