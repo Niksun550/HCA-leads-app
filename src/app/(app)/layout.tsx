@@ -285,18 +285,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/40">
+    <div className="grid min-h-screen w-full sm:grid-cols-[256px_1fr]">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
         <SidebarContent />
       </aside>
-      <div className="flex flex-col w-full sm:pl-64 pb-16 sm:pb-0">
+      <div className="flex flex-col sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Sun className="h-6 w-6 text-primary" />
             <span className="font-headline text-lg">SolarLeads</span>
           </Link>
         </header>
-        <main className="flex-1 p-4 sm:p-8">
+        <main className="flex-1 overflow-auto p-4 sm:p-8 pb-20 sm:pb-8">
             {children}
         </main>
          <MobileBottomNav />
