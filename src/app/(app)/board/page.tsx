@@ -39,7 +39,7 @@ const Column = ({ column, columnId }: { column: { name: TaskStatus; items: Task[
     const [isDroppable] = useStrictDroppable(true);
 
     return (
-        <div className="rounded-lg p-3 bg-muted/60">
+        <div className="rounded-lg p-3 bg-muted/60 min-w-[300px] w-[300px] flex-shrink-0">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-lg">{column.name}</h3>
                 <Badge variant="secondary">{column.items.length}</Badge>
@@ -50,7 +50,7 @@ const Column = ({ column, columnId }: { column: { name: TaskStatus; items: Task[
                         <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`transition-colors min-h-[400px] space-y-3 ${snapshot.isDraggingOver ? 'bg-primary/10' : ''}`}
+                            className={`transition-colors min-h-[400px] space-y-3 rounded-md ${snapshot.isDraggingOver ? 'bg-primary/10' : ''}`}
                         >
                             {column.items.map((item, index) => (
                                 <Draggable key={item.id} draggableId={item.id} index={index}>
@@ -215,7 +215,7 @@ export default function BoardPage() {
                 <p className="text-muted-foreground">Manage your workflow with a drag-and-drop board.</p>
             </header>
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+                <div className="flex gap-5 pb-4 overflow-x-auto">
                     {taskStatuses.map((status) => {
                         const column = columns?.[status];
                         if (!column) return null;
