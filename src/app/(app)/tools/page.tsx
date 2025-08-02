@@ -1,11 +1,13 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Lead } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from 'xlsx';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +16,16 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users } from "lucide-react";
+import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { generateWelcomeMessage } from "@/ai/flows/welcome-flow";
+import { generateWelcomeMessage, WelcomeMessageInput } from "@/ai/flows/welcome-flow";
+
+interface CampaignLead {
+    id: string;
+    customerName: string;
+}
 
 interface GeneratedContent {
     leadId: string;
@@ -27,7 +36,8 @@ interface GeneratedContent {
 export default function ToolsPage() {
     const { user, isInitialized } = useAuth();
     const { toast } = useToast();
-    const [newLeads, setNewLeads] = useState<Lead[]>([]);
+    const [dbLeads, setDbLeads] = useState<Lead[]>([]);
+    const [uploadedLeads, setUploadedLeads] = useState<CampaignLead[]>([]);
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -49,7 +59,7 @@ export default function ToolsPage() {
         const leadsQuery = query(collection(db, 'leads'), where('status', '==', 'New'));
         const unsubscribe = onSnapshot(leadsQuery, (snapshot) => {
             const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
-            setNewLeads(leadsData);
+            setDbLeads(leadsData);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching new leads:", error);
@@ -62,9 +72,56 @@ export default function ToolsPage() {
     const handleSelectLead = (leadId: string, checked: boolean) => {
         setSelectedLeads(prev => ({ ...prev, [leadId]: checked }));
     };
-    
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length === 0) {
+                    toast({ variant: 'destructive', title: 'Empty File', description: 'The uploaded file appears to be empty.' });
+                    return;
+                }
+
+                // Try to find 'customerName' or 'name' column, otherwise use the first column.
+                const header = Object.keys(json[0]);
+                const nameKey = header.find(h => h.toLowerCase().includes('name')) || header[0];
+
+                if (!nameKey) {
+                    toast({ variant: 'destructive', title: 'Invalid Format', description: 'Could not find a suitable column for customer names.' });
+                    return;
+                }
+
+                const newLeads = json.map((row, index) => ({
+                    id: `file-${index}-${row[nameKey]}`,
+                    customerName: row[nameKey],
+                }));
+                
+                setUploadedLeads(newLeads);
+                toast({ title: 'File Processed', description: `${newLeads.length} contacts were imported.` });
+            } catch (error) {
+                console.error("Error parsing file:", error);
+                toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not read the uploaded file. Please ensure it is a valid Excel file.' });
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    const allLeadsForCampaign: CampaignLead[] = useMemo(() => [
+        ...dbLeads.map(l => ({ id: l.id, customerName: l.customerName })),
+        ...uploadedLeads
+    ], [dbLeads, uploadedLeads]);
+
     const selectedLeadIds = Object.keys(selectedLeads).filter(id => selectedLeads[id]);
-    const leadsToProcess = newLeads.filter(lead => selectedLeadIds.includes(lead.id));
+    const leadsToProcess = allLeadsForCampaign.filter(lead => selectedLeadIds.includes(lead.id));
 
     const handleGenerate = async () => {
         if (leadsToProcess.length === 0) {
@@ -75,7 +132,7 @@ export default function ToolsPage() {
         setIsGenerating(true);
         setGeneratedContent([]);
         try {
-            const promises = leadsToProcess.map(lead => generateWelcomeMessage({ customerName: lead.customerName }));
+            const promises: Promise<any>[] = leadsToProcess.map(lead => generateWelcomeMessage({ customerName: lead.customerName }));
             const results = await Promise.all(promises);
             const content = results.map((result, index) => ({
                 leadId: leadsToProcess[index].id,
@@ -99,6 +156,21 @@ export default function ToolsPage() {
         setCopiedStates(prev => ({ ...prev, [leadId]: true }));
         setTimeout(() => setCopiedStates(prev => ({ ...prev, [leadId]: false })), 2000);
     };
+    
+    const LeadCheckboxList = ({ leads }: { leads: CampaignLead[] }) => (
+        <div className="space-y-2">
+            {leads.map(lead => (
+                <div key={lead.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                    <Checkbox
+                        id={lead.id}
+                        checked={selectedLeads[lead.id] || false}
+                        onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
+                    />
+                    <Label htmlFor={lead.id} className="font-normal cursor-pointer flex-1">{lead.customerName}</Label>
+                </div>
+            ))}
+        </div>
+    );
 
     return (
         <div className="py-4 space-y-8">
@@ -110,48 +182,62 @@ export default function ToolsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Customer Welcome Campaign</CardTitle>
-                    <CardDescription>Generate personalized welcome messages for new leads.</CardDescription>
+                    <CardDescription>Generate personalized welcome messages for new leads from your database or an uploaded file.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-8">
                     <div>
-                        <h3 className="font-semibold mb-2">1. Select New Leads</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Choose which customers to generate messages for.</p>
-                        <ScrollArea className="h-72 rounded-md border p-4">
-                            {loading ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-6 w-3/4" />
-                                    <Skeleton className="h-6 w-full" />
-                                    <Skeleton className="h-6 w-1/2" />
-                                </div>
-                            ) : newLeads.length > 0 ? (
-                                <div className="space-y-2">
-                                    {newLeads.map(lead => (
-                                        <div key={lead.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                            <Checkbox
-                                                id={lead.id}
-                                                checked={selectedLeads[lead.id] || false}
-                                                onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
-                                            />
-                                            <Label htmlFor={lead.id} className="font-normal cursor-pointer flex-1">{lead.customerName}</Label>
+                        <h3 className="font-semibold mb-2">1. Select Customers</h3>
+                        <p className="text-sm text-muted-foreground mb-4">Choose who to generate messages for.</p>
+                        <Tabs defaultValue="database">
+                             <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="database">From Database</TabsTrigger>
+                                <TabsTrigger value="file">From File</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="database">
+                                <ScrollArea className="h-72 rounded-md border p-4 mt-2">
+                                    {loading ? (
+                                        <div className="space-y-4">
+                                            <Skeleton className="h-6 w-3/4" />
+                                            <Skeleton className="h-6 w-full" />
+                                            <Skeleton className="h-6 w-1/2" />
                                         </div>
-                                    ))}
+                                    ) : dbLeads.length > 0 ? (
+                                        <LeadCheckboxList leads={dbLeads.map(l => ({id: l.id, customerName: l.customerName}))} />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                            <Users className="h-12 w-12 mb-2" />
+                                            <p>No new leads found in the database.</p>
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </TabsContent>
+                             <TabsContent value="file">
+                                 <div className="rounded-md border p-4 mt-2">
+                                    <Label htmlFor="file-upload" className="mb-2 block">Upload Excel File</Label>
+                                    <Input id="file-upload" type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
+                                    <p className="text-xs text-muted-foreground mt-2">Your file should have a header row with a column named 'name' or 'customerName'.</p>
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                    <Users className="h-12 w-12 mb-2" />
-                                    <p>No new leads found.</p>
-                                </div>
-                            )}
-                        </ScrollArea>
+                                <ScrollArea className="h-60 mt-2">
+                                     {uploadedLeads.length > 0 ? (
+                                        <LeadCheckboxList leads={uploadedLeads} />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                            <FileText className="h-12 w-12 mb-2" />
+                                            <p>Uploaded contacts will appear here.</p>
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </TabsContent>
+                        </Tabs>
                          <Button onClick={handleGenerate} disabled={isGenerating || selectedLeadIds.length === 0} className="mt-4 w-full">
                             {isGenerating ? <LoaderCircle className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
-                            Generate ({selectedLeadIds.length})
+                            Generate Welcome Messages ({selectedLeadIds.length})
                         </Button>
                     </div>
                     <div>
                         <h3 className="font-semibold mb-2">2. Generated Messages</h3>
                         <p className="text-sm text-muted-foreground mb-4">Copy the generated messages and send them to your customers.</p>
-                         <ScrollArea className="h-72 rounded-md border p-4 bg-muted/30">
+                         <ScrollArea className="h-[26rem] rounded-md border p-4 bg-muted/30">
                             {isGenerating ? (
                                 <div className="flex items-center justify-center h-full text-muted-foreground">
                                     <LoaderCircle className="animate-spin h-8 w-8" />
@@ -171,7 +257,8 @@ export default function ToolsPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+                                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                    <Wand2 className="h-12 w-12 mb-2" />
                                     <p>Generated messages will appear here.</p>
                                 </div>
                             )}
