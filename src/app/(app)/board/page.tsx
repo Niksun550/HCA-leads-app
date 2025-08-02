@@ -216,8 +216,8 @@ export default function BoardPage() {
             </header>
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
-                    {columns && taskStatuses.map((status) => {
-                        const column = columns[status];
+                    {taskStatuses.map((status) => {
+                        const column = columns?.[status];
                         if (!column) return null;
                         return <Column key={status} column={column} columnId={status} />;
                     })}
