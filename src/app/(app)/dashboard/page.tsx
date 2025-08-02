@@ -9,7 +9,7 @@ import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
-import LeadsTable from '@/components/dashboard/leads-table';
+import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
 import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
