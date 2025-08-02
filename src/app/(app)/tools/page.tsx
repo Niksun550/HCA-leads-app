@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon } from "lucide-react";
+import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -28,15 +28,24 @@ import { generateWelcomeMessage, WelcomeMessageInput } from "@/ai/flows/welcome-
 interface CampaignLead {
     id: string;
     customerName: string;
+    mobileNumber?: string;
 }
 
 interface GeneratedContent {
     leadId: string;
     customerName: string;
+    mobileNumber?: string;
     text: string;
 }
 
 type CampaignType = "ai_welcome" | "custom_text" | "custom_image";
+
+const WhatsAppIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+)
+
 
 export default function ToolsPage() {
     const { user, isInitialized } = useAuth();
@@ -101,6 +110,7 @@ export default function ToolsPage() {
                 }
                 const header = Object.keys(json[0]);
                 const nameKey = header.find(h => h.toLowerCase().includes('name')) || header[0];
+                const mobileKey = header.find(h => h.toLowerCase().includes('mobile') || h.toLowerCase().includes('phone'));
 
                 if (!nameKey) {
                     toast({ variant: 'destructive', title: 'Invalid Format', description: 'Could not find a suitable column for customer names.' });
@@ -110,6 +120,7 @@ export default function ToolsPage() {
                 const newLeads = json.map((row, index) => ({
                     id: `file-${index}-${row[nameKey]}`,
                     customerName: String(row[nameKey]),
+                    mobileNumber: mobileKey ? String(row[mobileKey]).replace(/\D/g, '') : undefined,
                 }));
                 
                 setUploadedLeads(newLeads);
@@ -134,7 +145,7 @@ export default function ToolsPage() {
     };
 
     const allLeadsForCampaign: CampaignLead[] = useMemo(() => [
-        ...dbLeads.map(l => ({ id: l.id, customerName: l.customerName })),
+        ...dbLeads.map(l => ({ id: l.id, customerName: l.customerName, mobileNumber: l.mobileNumber })),
         ...uploadedLeads
     ], [dbLeads, uploadedLeads]);
 
@@ -156,6 +167,7 @@ export default function ToolsPage() {
                 const content = results.map((result, index) => ({
                     leadId: leadsToProcess[index].id,
                     customerName: leadsToProcess[index].customerName,
+                    mobileNumber: leadsToProcess[index].mobileNumber,
                     text: result.welcomeMessage,
                 }));
                 setGeneratedContent(content);
@@ -176,6 +188,27 @@ export default function ToolsPage() {
         setCopiedStates(prev => ({ ...prev, [leadId]: true }));
         setTimeout(() => setCopiedStates(prev => ({ ...prev, [leadId]: false })), 2000);
     };
+
+    const handleSendWhatsApp = (mobileNumber: string, text: string) => {
+        if (!mobileNumber) {
+            toast({ variant: 'destructive', title: 'No mobile number', description: 'This contact does not have a mobile number.'});
+            return;
+        }
+        const url = `https://wa.me/${mobileNumber}?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
+
+    const handleBulkWhatsApp = (text: string) => {
+        if (!text) {
+             toast({ variant: 'destructive', title: 'No Message', description: 'Please write a message to send.'});
+            return;
+        }
+        leadsToProcess.forEach(lead => {
+            if (lead.mobileNumber) {
+                handleSendWhatsApp(lead.mobileNumber, text);
+            }
+        });
+    };
     
     const LeadCheckboxList = ({ leads }: { leads: CampaignLead[] }) => (
         <div className="space-y-2">
@@ -186,7 +219,10 @@ export default function ToolsPage() {
                         checked={selectedLeads[lead.id] || false}
                         onCheckedChange={(checked) => handleSelectLead(lead.id, !!checked)}
                     />
-                    <Label htmlFor={lead.id} className="font-normal cursor-pointer flex-1">{lead.customerName}</Label>
+                    <div className="flex-1">
+                        <Label htmlFor={lead.id} className="font-normal cursor-pointer flex-1">{lead.customerName}</Label>
+                        {lead.mobileNumber && <p className="text-xs text-muted-foreground">({lead.mobileNumber})</p>}
+                    </div>
                 </div>
             ))}
         </div>
@@ -200,9 +236,14 @@ export default function ToolsPage() {
                         <Alert key={content.leadId}>
                             <AlertTitle className="flex items-center justify-between">
                                 For {content.customerName}
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopy(content.text, content.leadId)}>
-                                    {copiedStates[content.leadId] ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
-                                </Button>
+                                <div className="flex items-center">
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleSendWhatsApp(content.mobileNumber!, content.text)} disabled={!content.mobileNumber}>
+                                        <WhatsAppIcon />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopy(content.text, content.leadId)}>
+                                        {copiedStates[content.leadId] ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
+                                    </Button>
+                                </div>
                             </AlertTitle>
                             <AlertDescription>{content.text}</AlertDescription>
                         </Alert>
@@ -210,24 +251,16 @@ export default function ToolsPage() {
                 </div>
             );
         }
-        if (campaignType === 'custom_text' && customMessage) {
+        if ((campaignType === 'custom_text' && customMessage) || (campaignType === 'custom_image' && customImage)) {
             return (
-                <Alert>
-                    <AlertTitle>Your Custom Message</AlertTitle>
-                    <AlertDescription className="whitespace-pre-wrap">{customMessage}</AlertDescription>
-                </Alert>
+                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-green-500/5 rounded-lg">
+                    <MessageSquare className="h-12 w-12 mb-2 text-green-600" />
+                    <p className="font-semibold text-green-700">Content Ready!</p>
+                    <p>Click the button below to send your content to the {leadsToProcess.length} selected customer(s).</p>
+                </div>
             );
         }
-        if (campaignType === 'custom_image' && customImage) {
-            return (
-                <div className="space-y-2">
-                    <Label>Image Preview</Label>
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
-                        <Image src={customImage} alt="Uploaded flyer" layout="fill" objectFit="contain" />
-                    </div>
-                </div>
-            )
-        }
+
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
                 <Wand2 className="h-12 w-12 mb-2" />
@@ -264,7 +297,7 @@ export default function ToolsPage() {
                                                 <Skeleton className="h-6 w-3/4" /><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-1/2" />
                                             </div>
                                         ) : dbLeads.length > 0 ? (
-                                            <LeadCheckboxList leads={dbLeads.map(l => ({id: l.id, customerName: l.customerName}))} />
+                                            <LeadCheckboxList leads={dbLeads.map(l => ({id: l.id, customerName: l.customerName, mobileNumber: l.mobileNumber}))} />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                                                 <Users className="h-12 w-12 mb-2" /><p>No new leads found in the database.</p>
@@ -276,7 +309,7 @@ export default function ToolsPage() {
                                      <div className="rounded-md border p-4 mt-2 space-y-2">
                                         <Label htmlFor="file-upload">Upload Excel File</Label>
                                         <Input id="file-upload" type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} />
-                                        <p className="text-xs text-muted-foreground">File must have a header with a 'name' or 'customerName' column.</p>
+                                        <p className="text-xs text-muted-foreground">File must have a header with a 'name' and 'mobile'/'phone' column.</p>
                                     </div>
                                     <ScrollArea className="h-48 mt-2">
                                          {uploadedLeads.length > 0 ? (
@@ -316,11 +349,20 @@ export default function ToolsPage() {
                                 </Button>
                              )}
                               {campaignType === 'custom_text' && (
-                                <Textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} placeholder="Write your message here..." className="mt-4 min-h-[120px]" />
+                                <div className="mt-4 space-y-2">
+                                    <Textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} placeholder="Write your message here..." className="min-h-[120px]" />
+                                    <Button onClick={() => handleBulkWhatsApp(customMessage)} disabled={selectedLeadIds.length === 0} className="w-full">
+                                        <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
+                                    </Button>
+                                </div>
                               )}
                               {campaignType === 'custom_image' && (
-                                <div className="mt-4">
+                                <div className="mt-4 space-y-2">
                                     <Input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} />
+                                     <Button onClick={() => handleBulkWhatsApp("Please see attached image.")} disabled={selectedLeadIds.length === 0 || !customImage} className="w-full">
+                                        <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground">Note: Image must be attached manually in WhatsApp after the chat opens.</p>
                                 </div>
                               )}
                         </div>
@@ -329,7 +371,7 @@ export default function ToolsPage() {
                         <div>
                              <h3 className="font-semibold mb-2 text-lg">3. Review & Use</h3>
                               <p className="text-sm text-muted-foreground mb-2">
-                                  There is no "Send" button. Please copy/download the generated content and send it to your customers via your preferred communication channel (e.g., SMS, WhatsApp, Email).
+                                  Use the buttons below to send the content to your customers via your preferred communication channel (e.g., SMS, WhatsApp, Email).
                               </p>
                              <div className="min-h-[24rem] rounded-md border p-4 bg-muted/30">
                                 {isGenerating ? (
