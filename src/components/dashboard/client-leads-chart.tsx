@@ -1,6 +1,7 @@
+
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Bar, ComposedChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Lead } from '@/types';
 import { useMemo } from 'react';
@@ -14,19 +15,17 @@ export default function LeadsChart({ leads }: LeadsChartProps) {
   const data = useMemo(() => {
     const statusCounts: { [key: string]: number } = {};
     
-    // Initialize all possible statuses to ensure they appear on the chart
     leadStatuses.forEach(status => {
       statusCounts[status] = 0;
     });
 
-    // Count leads for each status
     leads.forEach(lead => {
       if (statusCounts[lead.status] !== undefined) {
         statusCounts[lead.status]++;
       }
     });
     
-    return Object.entries(statusCounts).map(([name, value]) => ({ name, count: value }));
+    return Object.entries(statusCounts).map(([name, count]) => ({ name, count }));
   }, [leads]);
 
   return (
@@ -37,35 +36,24 @@ export default function LeadsChart({ leads }: LeadsChartProps) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-            <XAxis
-              dataKey="name"
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              interval={0}
-              angle={-45}
-              textAnchor="end"
-              height={60}
-            />
-            <YAxis
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: "14px" }}/>
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count" />
-          </BarChart>
+            <ComposedChart
+                layout="vertical"
+                data={data}
+                margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
+            >
+                <CartesianGrid stroke="#f5f5f5" />
+                <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                <YAxis dataKey="name" type="category" scale="band" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={110} />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "var(--radius)",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "14px" }}/>
+                <Bar dataKey="count" barSize={20} fill="hsl(var(--primary))" name="Lead Count" />
+            </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
