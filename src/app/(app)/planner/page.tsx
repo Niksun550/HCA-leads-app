@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, Timestamp, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Task, TaskPriority, TaskCategory, AppUser } from "@/types";
+import type { Task, TaskPriority, TaskCategory, AppUser, Lead } from "@/types";
 import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks } from 'date-fns';
 
 import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
@@ -34,6 +35,7 @@ export default function PlannerPage() {
     const { user, isInitialized } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+    const [allLeads, setAllLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekDates, setWeekDates] = useState<Date[]>([]);
@@ -60,6 +62,16 @@ export default function PlannerPage() {
         };
         
         fetchUsers();
+
+        // Fetch leads assigned to the user for the "Related Lead" dropdown
+        const leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+        const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+            setAllLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
+        }, (error) => {
+            console.error("Error fetching leads for planner:", error);
+        });
+
+        return () => unsubscribeLeads();
     }, [isInitialized, user]);
 
     useEffect(() => {
@@ -198,7 +210,7 @@ export default function PlannerPage() {
                 setIsOpen={setIsTaskFormOpen}
                 task={selectedTask}
                 users={allUsers}
-                leads={[]}
+                leads={allLeads}
             />
         </div>
     );
