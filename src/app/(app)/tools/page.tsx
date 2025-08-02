@@ -49,7 +49,6 @@ export default function ToolsPage() {
     const [message, setMessage] = useState("");
     const [image, setImage] = useState<string | null>(null);
     const [senderNumber, setSenderNumber] = useState("");
-    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!isInitialized || !user) {
@@ -139,13 +138,16 @@ export default function ToolsPage() {
     ], [dbLeads, uploadedLeads]);
 
     const selectedLeadIds = Object.keys(selectedLeads).filter(id => selectedLeads[id]);
-    const leadsToProcess = allLeadsForCampaign.filter(lead => selectedLeadIds.includes(lead.id));
+    
+    const leadsToProcess = useMemo(() => {
+        return allLeadsForCampaign.filter(lead => selectedLeadIds.includes(lead.id));
+    }, [allLeadsForCampaign, selectedLeadIds]);
 
     const handleGenerateAIWelcome = async () => {
         setIsGenerating(true);
         try {
             const result = await generateWelcomeMessage({ customerName: "Customer" }); // Generic welcome
-            setMessage(result.welcomeMessage.replace('{{customerName}}', '{{customerName}}')); // Keep placeholder
+            setMessage(result.welcomeMessage);
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Generation Failed', description: error.message || 'An unexpected error occurred.' });
         } finally {
@@ -164,12 +166,18 @@ export default function ToolsPage() {
         }
 
         leadsToProcess.forEach(lead => {
-            if (!lead.mobileNumber) return;
+            if (!lead.mobileNumber) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Missing Number',
+                    description: `Cannot send to ${lead.customerName} as no mobile number is available.`,
+                });
+                return;
+            }
 
-            // Replace placeholder and add sender info
             let personalizedMessage = message.replace(/{{customerName}}/g, lead.customerName);
             if (senderNumber) {
-                personalizedMessage += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
+                personalizedMessage += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}.\nReply to: ${senderNumber}`;
             }
             
             const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(personalizedMessage)}`;
@@ -271,7 +279,7 @@ export default function ToolsPage() {
                                     onChange={(e) => setMessage(e.target.value)}
                                     className="min-h-[120px]"
                                 />
-                                <p className="text-xs text-muted-foreground">The placeholder `{{'{'}}{'{'}customerName{'}'}{'}'}` will be replaced with each customer's name.</p>
+                                <p className="text-xs text-muted-foreground">The placeholder `{"{{customerName}}".replace(/{/g, '{{').replace(/}/g, '}}')}` will be replaced with each customer's name.</p>
 
                                 <div className="space-y-2 pt-2">
                                     <Label htmlFor="image-upload-main">Attach Image/Flyer (Optional)</Label>
