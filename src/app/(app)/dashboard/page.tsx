@@ -9,8 +9,7 @@ import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
-import { LeadsChart } from '@/components/dashboard/leads-chart';
-import { LeadsTable } from '@/components/dashboard/leads-table';
+import LeadsTable from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
 import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
@@ -26,6 +25,12 @@ import {
 import { leadStatuses, structureLeadStatuses } from '@/types';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
+
+const ClientLeadsChart = dynamic(() => import('@/components/dashboard/client-leads-chart'), {
+  ssr: false,
+  loading: () => <div className="h-[350px] w-full flex items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
+});
 
 
 export default function DashboardPage() {
@@ -216,7 +221,7 @@ export default function DashboardPage() {
 
           <div className="grid gap-8 md:grid-cols-5">
             <div className="md:col-span-3">
-              <LeadsChart leads={filteredLeads} />
+              <ClientLeadsChart leads={filteredLeads} />
             </div>
             <div className="md:col-span-2">
               <LeadsMap leads={filteredLeads} />

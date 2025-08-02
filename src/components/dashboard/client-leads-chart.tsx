@@ -11,7 +11,7 @@ interface LeadsChartProps {
   leads: Lead[];
 }
 
-export function LeadsChart({ leads }: LeadsChartProps) {
+export default function LeadsChart({ leads }: LeadsChartProps) {
   const data = useMemo(() => {
     const statusCounts: { [key: string]: number } = {};
     
