@@ -42,7 +42,7 @@ const WhatsAppIcon = () => (
 export default function ToolsPage() {
     const { user, isInitialized } = useAuth();
     const { toast } = useToast();
-    const [dbLeads, setDbLeads] = useState<Lead[]>([]);
+    const [dbLeads, setDbLeads] = useState<CampaignLead[]>([]);
     const [uploadedLeads, setUploadedLeads] = useState<CampaignLead[]>([]);
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
@@ -76,7 +76,10 @@ export default function ToolsPage() {
         }
 
         const unsubscribe = onSnapshot(leadsQuery, (snapshot) => {
-            const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+            const leadsData = snapshot.docs.map(doc => {
+                const data = doc.data() as Lead;
+                return { id: doc.id, customerName: data.customerName, mobileNumber: data.mobileNumber };
+            });
             setDbLeads(leadsData);
             setLoading(false);
         }, (error) => {
@@ -145,15 +148,16 @@ export default function ToolsPage() {
     };
 
     const allLeadsForCampaign: CampaignLead[] = useMemo(() => [
-        ...dbLeads.map(l => ({ id: l.id, customerName: l.customerName, mobileNumber: l.mobileNumber })),
+        ...dbLeads,
         ...uploadedLeads
     ], [dbLeads, uploadedLeads]);
 
     const selectedLeadIds = Object.keys(selectedLeads).filter(id => selectedLeads[id]);
     
     const leadsToProcess = useMemo(() => {
-        return allLeadsForCampaign.filter(lead => selectedLeadIds.includes(lead.id));
-    }, [allLeadsForCampaign, selectedLeadIds]);
+        const allLeads = [...dbLeads, ...uploadedLeads];
+        return allLeads.filter(lead => selectedLeadIds.includes(lead.id));
+    }, [dbLeads, uploadedLeads, selectedLeadIds]);
 
     const handleGenerateAIWelcome = async () => {
         setIsGenerating(true);
@@ -267,7 +271,7 @@ export default function ToolsPage() {
                                                 <Skeleton className="h-6 w-3/4" /><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-1/2" />
                                             </div>
                                         ) : dbLeads.length > 0 ? (
-                                            <LeadCheckboxList leads={dbLeads.map(l => ({id: l.id, customerName: l.customerName, mobileNumber: l.mobileNumber}))} />
+                                            <LeadCheckboxList leads={dbLeads} />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                                                 <Users className="h-12 w-12 mb-2" /><p>No leads found for this status.</p>
@@ -373,3 +377,5 @@ export default function ToolsPage() {
         </div>
     );
 }
+
+    
