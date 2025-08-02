@@ -2,10 +2,11 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Query } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Lead } from "@/types";
+import type { Lead, LeadStatus } from "@/types";
+import { leadStatuses } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import Image from 'next/image';
 
@@ -49,7 +51,8 @@ export default function ToolsPage() {
     const [message, setMessage] = useState("");
     const [image, setImage] = useState<string | null>(null);
     const [senderNumber, setSenderNumber] = useState("");
-    const [copied, setCopied] = useState(false);
+    const [isMessageCopied, setIsMessageCopied] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">("New");
 
 
     useEffect(() => {
@@ -58,24 +61,31 @@ export default function ToolsPage() {
             return;
         }
 
+        setLoading(true);
         const { db } = getFirebaseServices();
         if (!db) {
             setLoading(false);
             return;
         }
 
-        const leadsQuery = query(collection(db, 'leads'), where('status', '==', 'New'));
+        let leadsQuery: Query;
+        if (statusFilter === "All") {
+            leadsQuery = query(collection(db, 'leads'));
+        } else {
+            leadsQuery = query(collection(db, 'leads'), where('status', '==', statusFilter));
+        }
+
         const unsubscribe = onSnapshot(leadsQuery, (snapshot) => {
             const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
             setDbLeads(leadsData);
             setLoading(false);
         }, (error) => {
-            console.error("Error fetching new leads:", error);
+            console.error("Error fetching leads:", error);
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [user, isInitialized]);
+    }, [user, isInitialized, statusFilter]);
 
     const handleSelectLead = (leadId: string, checked: boolean) => {
         setSelectedLeads(prev => ({ ...prev, [leadId]: checked }));
@@ -157,7 +167,7 @@ export default function ToolsPage() {
         }
     };
     
-    const handleBulkWhatsApp = useCallback(() => {
+    const handleCampaignSend = useCallback(() => {
         if (leadsToProcess.length === 0) {
             toast({ variant: 'destructive', title: 'No customers selected', description: 'Please select at least one customer to target.' });
             return;
@@ -166,6 +176,16 @@ export default function ToolsPage() {
             toast({ variant: 'destructive', title: 'No message', description: 'Please write a message to send.' });
             return;
         }
+
+        let personalizedMessage = message;
+        if (senderNumber) {
+            const replyLink = `https://wa.me/${senderNumber}`;
+            personalizedMessage += `\n\nFor more details, click here to reply: ${replyLink}`;
+        }
+
+        navigator.clipboard.writeText(personalizedMessage);
+        setIsMessageCopied(true);
+        setTimeout(() => setIsMessageCopied(false), 2000);
 
         leadsToProcess.forEach(lead => {
             if (!lead.mobileNumber) {
@@ -176,15 +196,9 @@ export default function ToolsPage() {
                 });
                 return;
             }
-
-            let personalizedMessage = message.replace(/{{customerName}}/gi, lead.customerName);
             
-            if (senderNumber) {
-                const replyLink = `https://wa.me/${senderNumber}`;
-                personalizedMessage += `\n\nFor more details, click here to reply: ${replyLink}`;
-            }
-            
-            const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(personalizedMessage)}`;
+            const dynamicMessage = personalizedMessage.replace(/{{customerName}}/gi, lead.customerName);
+            const url = `https://wa.me/${lead.mobileNumber}?text=${encodeURIComponent(dynamicMessage)}`;
             window.open(url, '_blank');
         });
     }, [leadsToProcess, message, senderNumber, toast]);
@@ -232,7 +246,21 @@ export default function ToolsPage() {
                                     <TabsTrigger value="database">From Database</TabsTrigger>
                                     <TabsTrigger value="file">From File</TabsTrigger>
                                 </TabsList>
-                                <TabsContent value="database">
+                                <TabsContent value="database" className="space-y-4">
+                                     <div className="pt-2">
+                                        <Label htmlFor="status-filter">Filter by Status</Label>
+                                        <Select value={statusFilter} onValueChange={(value: LeadStatus | "All") => setStatusFilter(value)}>
+                                            <SelectTrigger id="status-filter">
+                                                <SelectValue placeholder="Select status..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="All">All Statuses</SelectItem>
+                                                {leadStatuses.map(status => (
+                                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                     <ScrollArea className="h-60 rounded-md border p-4 mt-2">
                                         {loading ? (
                                             <div className="space-y-4">
@@ -242,7 +270,7 @@ export default function ToolsPage() {
                                             <LeadCheckboxList leads={dbLeads.map(l => ({id: l.id, customerName: l.customerName, mobileNumber: l.mobileNumber}))} />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                                <Users className="h-12 w-12 mb-2" /><p>No new leads found in the database.</p>
+                                                <Users className="h-12 w-12 mb-2" /><p>No leads found for this status.</p>
                                             </div>
                                         )}
                                     </ScrollArea>
@@ -274,7 +302,7 @@ export default function ToolsPage() {
                                  <Label htmlFor="campaign-message">Message Content</Label>
                                   <Button variant="ghost" size="sm" onClick={handleGenerateAIWelcome} disabled={isGenerating}>
                                       {isGenerating ? <LoaderCircle className="animate-spin h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
-                                      AI Generate
+                                      AI Suggest
                                   </Button>
                                </div>
                                 <Textarea
@@ -307,22 +335,27 @@ export default function ToolsPage() {
                         <div>
                              <h3 className="font-semibold mb-2 text-lg">3. Send Campaign</h3>
                              <div className="p-4 border-dashed border-2 rounded-lg text-center space-y-4">
-                                <div>
-                                    <p className="font-medium">Ready to Launch?</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        This will open WhatsApp on your device for each selected customer.
-                                    </p>
-                                </div>
                                 
                                 {image && (
                                      <div className="w-24 h-24 mx-auto relative rounded-md border overflow-hidden">
                                          <Image src={image} alt="Uploaded preview" layout="fill" objectFit="cover" />
                                      </div>
                                 )}
+                                 <div className="flex flex-col items-center gap-2">
+                                     <Button onClick={handleCampaignSend} disabled={selectedLeadIds.length === 0 || !message}>
+                                        <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => navigator.clipboard.writeText(message)}
+                                        disabled={!message}
+                                    >
+                                        {isMessageCopied ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
+                                        Copy Message
+                                    </Button>
+                                 </div>
                                 
-                                <Button onClick={handleBulkWhatsApp} disabled={selectedLeadIds.length === 0 || !message}>
-                                    <WhatsAppIcon /> Send to {selectedLeadIds.length} customer(s)
-                                </Button>
                                 {image && (
                                      <Alert variant="default" className="mt-4 text-left">
                                         <Info className="h-4 w-4" />
@@ -340,5 +373,3 @@ export default function ToolsPage() {
         </div>
     );
 }
-
-    
