@@ -59,6 +59,18 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
     const db = admin.firestore();
 
     try {
+        const sortedParticipants = [currentUserId, otherUserId].sort();
+        const conversationId = sortedParticipants.join('_');
+        const conversationRef = doc(db, 'conversations', conversationId);
+        
+        const docSnap = await conversationRef.get();
+        
+        if (docSnap.exists()) {
+             const existingConversation = docSnap.data();
+             // Manually add the id to the returned object
+             return { conversation: { id: docSnap.id, ...existingConversation } };
+        }
+
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
         const otherUserDoc = await db.collection('users').doc(otherUserId).get();
 
@@ -69,18 +81,6 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const currentUserData = currentUserDoc.data();
         const otherUserData = otherUserDoc.data();
         
-        const sortedParticipants = [currentUserId, otherUserId].sort();
-        const conversationId = sortedParticipants.join('_');
-        const conversationRef = db.collection('conversations').doc(conversationId);
-        
-        const docSnap = await conversationRef.get();
-        
-        if (docSnap.exists()) {
-             const existingConversation = docSnap.data();
-             // Manually add the id to the returned object
-             return { conversation: { id: docSnap.id, ...existingConversation } };
-        }
-
         const newConversation = {
             participants: sortedParticipants,
             participantNames: {
@@ -109,6 +109,9 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
 
     } catch (error) {
         console.error("Error creating conversation:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
         throw new functions.https.HttpsError(
             'internal',
             'An error occurred while creating the conversation.',
