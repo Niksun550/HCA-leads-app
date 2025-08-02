@@ -61,6 +61,7 @@ export default function ToolsPage() {
     const [campaignType, setCampaignType] = useState<CampaignType>("ai_welcome");
     const [customMessage, setCustomMessage] = useState("");
     const [customImage, setCustomImage] = useState<string | null>(null);
+    const [senderNumber, setSenderNumber] = useState("");
 
     useEffect(() => {
         if (!isInitialized || !user) {
@@ -164,12 +165,18 @@ export default function ToolsPage() {
             if (campaignType === 'ai_welcome') {
                 const promises = leadsToProcess.map(lead => generateWelcomeMessage({ customerName: lead.customerName }));
                 const results = await Promise.all(promises);
-                const content = results.map((result, index) => ({
-                    leadId: leadsToProcess[index].id,
-                    customerName: leadsToProcess[index].customerName,
-                    mobileNumber: leadsToProcess[index].mobileNumber,
-                    text: result.welcomeMessage,
-                }));
+                const content = results.map((result, index) => {
+                    let text = result.welcomeMessage;
+                    if(senderNumber) {
+                        text += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
+                    }
+                    return {
+                        leadId: leadsToProcess[index].id,
+                        customerName: leadsToProcess[index].customerName,
+                        mobileNumber: leadsToProcess[index].mobileNumber,
+                        text: text,
+                    }
+                });
                 setGeneratedContent(content);
             }
         } catch (error: any) {
@@ -203,9 +210,13 @@ export default function ToolsPage() {
              toast({ variant: 'destructive', title: 'No Message', description: 'Please write a message to send.'});
             return;
         }
+        let messageToSend = text;
+        if(senderNumber) {
+            messageToSend += `\n\n- Sent by ${user?.displayName || 'SolarLeads'}. Reply to ${senderNumber}`;
+        }
         leadsToProcess.forEach(lead => {
             if (lead.mobileNumber) {
-                handleSendWhatsApp(lead.mobileNumber, text);
+                handleSendWhatsApp(lead.mobileNumber, messageToSend);
             }
         });
     };
@@ -245,7 +256,7 @@ export default function ToolsPage() {
                                     </Button>
                                 </div>
                             </AlertTitle>
-                            <AlertDescription>{content.text}</AlertDescription>
+                            <AlertDescription className="whitespace-pre-wrap">{content.text}</AlertDescription>
                         </Alert>
                     ))}
                 </div>
@@ -323,8 +334,8 @@ export default function ToolsPage() {
                                 </TabsContent>
                             </Tabs>
                         </div>
-                        <div>
-                            <h3 className="font-semibold mb-2 text-lg">2. Choose Content Type</h3>
+                        <div className="space-y-4">
+                            <h3 className="font-semibold text-lg">2. Choose Content Type</h3>
                             <RadioGroup value={campaignType} onValueChange={(v) => setCampaignType(v as CampaignType)} className="p-4 border rounded-md grid md:grid-cols-3 gap-4">
                                 <Label htmlFor="type-ai" className="flex flex-col items-center gap-2 p-2 rounded-md border border-transparent has-[:checked]:border-primary has-[:checked]:bg-primary/5 cursor-pointer">
                                     <RadioGroupItem value="ai_welcome" id="type-ai" className="sr-only" />
@@ -342,6 +353,19 @@ export default function ToolsPage() {
                                     <span className="text-center font-normal">Image / Flyer</span>
                                 </Label>
                             </RadioGroup>
+                             
+                             <div>
+                                <Label htmlFor="sender-number">Your WhatsApp Number (Optional)</Label>
+                                <Input 
+                                    id="sender-number"
+                                    type="tel"
+                                    placeholder="e.g., 919876543210"
+                                    value={senderNumber}
+                                    onChange={(e) => setSenderNumber(e.target.value.replace(/\D/g, ''))}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">Include country code without '+' or '00'.</p>
+                             </div>
+
                              {campaignType === 'ai_welcome' && (
                                 <Button onClick={handleGenerate} disabled={isGenerating || selectedLeadIds.length === 0} className="mt-4 w-full">
                                     {isGenerating ? <LoaderCircle className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
