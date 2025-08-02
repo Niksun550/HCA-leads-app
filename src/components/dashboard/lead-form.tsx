@@ -13,6 +13,9 @@ import type { Lead, AppUser, Remark, Attachment, Message } from "@/types";
 import { leadStatuses, leadSources, meterTypes, propertyTypes, structureLeadStatuses } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
+import Image from 'next/image';
+import { generateMarketingImage } from "@/ai/flows/generate-image-flow";
+
 import {
   Dialog,
   DialogContent,
@@ -42,7 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare, ListTodo } from "lucide-react";
+import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare, ListTodo, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +88,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,6 +124,11 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     }
     return leadStatuses.filter(s => !structureLeadStatuses.includes(s) || s === 'Structure Pending');
   }, [isStructureForm]);
+  
+  const canGenerateImage = useMemo(() => {
+    if (!user) return false;
+    return ['Sales Rep', 'Admin', 'Director'].includes(user.role);
+  }, [user]);
 
   useEffect(() => {
     if (lead) {
@@ -150,6 +160,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       });
       setAttachments([]);
     }
+    setGeneratedImage(null);
   }, [lead, user, form, isOpen]);
 
   useEffect(() => {
@@ -335,6 +346,29 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     }
   };
   
+  const handleGenerateImage = async () => {
+    if (!lead) return;
+    setIsGeneratingImage(true);
+    setGeneratedImage(null);
+    try {
+        const result = await generateMarketingImage({ propertyType: lead.propertyType });
+        if (result.imageUrl) {
+            setGeneratedImage(result.imageUrl);
+            toast({ title: "Image generated successfully!" });
+        } else {
+            throw new Error("The AI didn't return an image.");
+        }
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Image Generation Failed",
+            description: error.message || "An unexpected error occurred.",
+        });
+    } finally {
+        setIsGeneratingImage(false);
+    }
+  };
+  
   return (
     <>
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -356,9 +390,10 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         <div className="grid md:grid-cols-2 overflow-hidden">
             <div className="overflow-y-auto pr-2">
                 <Tabs defaultValue="details" className="p-6">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="details">Details</TabsTrigger>
                         <TabsTrigger value="attachments">Attachments</TabsTrigger>
+                        <TabsTrigger value="marketing" disabled={!lead || !canGenerateImage}>Marketing</TabsTrigger>
                     </TabsList>
                     <TabsContent value="details">
                         <Form {...form}>
@@ -567,6 +602,59 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                             )}
                          </div>
                     </TabsContent>
+                    <TabsContent value="marketing">
+                        <div className="space-y-4 pt-4">
+                             <div className="p-4 border-dashed border-2 rounded-lg text-center">
+                                <p className="font-semibold">AI Marketing Image Generator</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Create a unique, beautiful image to share with your customer.
+                                </p>
+                                <Button
+                                    type="button"
+                                    onClick={handleGenerateImage}
+                                    disabled={isGeneratingImage}
+                                    className="mt-4"
+                                >
+                                    {isGeneratingImage ? (
+                                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Wand2 className="mr-2 h-4 w-4" />
+                                    )}
+                                    Generate Image
+                                </Button>
+                            </div>
+
+                            {isGeneratingImage && (
+                                <div className="flex flex-col items-center justify-center h-48 bg-muted rounded-lg">
+                                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                                    <p className="mt-2 text-sm text-muted-foreground">Generating... this may take a moment.</p>
+                                </div>
+                            )}
+
+                            {generatedImage && (
+                                <div className="space-y-2">
+                                    <p className="font-medium text-sm">Generated Image:</p>
+                                    <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                                        <Image
+                                            src={generatedImage}
+                                            alt="AI-generated marketing image"
+                                            layout="fill"
+                                            objectFit="cover"
+                                        />
+                                    </div>
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        <a href={generatedImage} download={`solar-concept-${lead?.customerName.replace(/\s+/g, '-')}.png`}>
+                                            <Download className="mr-2" /> Download Image
+                                        </a>
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
                 </Tabs>
                 <div className="p-6 pt-0 flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
@@ -608,3 +696,5 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     </>
   );
 }
+
+    
