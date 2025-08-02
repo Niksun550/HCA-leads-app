@@ -76,7 +76,9 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const docSnap = await conversationRef.get();
         
         if (docSnap.exists()) {
-            return { conversation: { id: docSnap.id, ...docSnap.data() } };
+             const existingConversation = docSnap.data();
+             // Manually add the id to the returned object
+             return { conversation: { id: docSnap.id, ...existingConversation } };
         }
 
         const newConversation = {
@@ -99,7 +101,11 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
 
         await conversationRef.set(newConversation);
 
-        return { conversation: { id: conversationId, ...newConversation } };
+        // After setting, we need to fetch the doc again to get the server timestamp
+        const newDocSnap = await conversationRef.get();
+        const finalConversation = newDocSnap.data();
+
+        return { conversation: { id: conversationId, ...finalConversation } };
 
     } catch (error) {
         console.error("Error creating conversation:", error);
