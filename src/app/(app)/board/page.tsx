@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useStrictDroppable } from "@/hooks/use-strict-droppable";
 
 const priorityIcons: Record<TaskPriority, React.ReactNode> = {
     High: <ChevronUp className="h-4 w-4 text-red-500" />,
@@ -33,6 +34,64 @@ type BoardData = {
         items: Task[];
     };
 };
+
+const Column = ({ column, columnId }: { column: { name: TaskStatus; items: Task[] }, columnId: string }) => {
+    const [isDroppable] = useStrictDroppable(true);
+
+    return (
+        <div className="rounded-lg p-3 bg-muted/60">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-lg">{column.name}</h3>
+                <Badge variant="secondary">{column.items.length}</Badge>
+            </div>
+            {isDroppable && (
+                <Droppable key={columnId} droppableId={columnId}>
+                    {(provided, snapshot) => (
+                        <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`transition-colors min-h-[400px] space-y-3 ${snapshot.isDraggingOver ? 'bg-primary/10' : ''}`}
+                        >
+                            {column.items.map((item, index) => (
+                                <Draggable key={item.id} draggableId={item.id} index={index}>
+                                    {(provided, snapshot) => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            style={{ ...provided.draggableProps.style }}
+                                            className={`bg-card p-4 rounded-lg shadow-sm border ${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary' : ''}`}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <p className="font-medium break-words pr-2">{item.title}</p>
+                                                <span title={item.priority + " priority"}>{priorityIcons[item.priority]}</span>
+                                            </div>
+                                            {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
+                                            <div className="flex items-center justify-between mt-3">
+                                                <Badge variant="secondary" className="gap-1.5 pl-1.5 text-xs">
+                                                    <span title={item.category}>{categoryIcons[item.category]}</span>
+                                                    {item.category}
+                                                </Badge>
+                                                <div title={`Assigned to ${item.assigneeName}`}>
+                                                    <Avatar className="h-6 w-6">
+                                                        <AvatarFallback className="text-xs">{item.assigneeName.split(' ').map(n => n[0]).join('').toUpperCase()}</AvatarFallback>
+                                                    </Avatar>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Draggable>
+                            ))}
+                            {provided.placeholder}
+                            {column.items.length === 0 && <div className="text-center text-sm text-muted-foreground pt-16">No tasks here</div>}
+                        </div>
+                    )}
+                </Droppable>
+            )}
+        </div>
+    );
+};
+
 
 export default function BoardPage() {
     const { user, isInitialized } = useAuth();
@@ -158,54 +217,7 @@ export default function BoardPage() {
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
                     {columns && Object.entries(columns).map(([columnId, column]) => (
-                        <Droppable key={columnId} droppableId={columnId}>
-                            {(provided, snapshot) => (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className={`rounded-lg p-3 transition-colors ${snapshot.isDraggingOver ? 'bg-primary/10' : 'bg-muted/60'}`}
-                                >
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-semibold text-lg">{column.name}</h3>
-                                        <Badge variant="secondary">{column.items.length}</Badge>
-                                    </div>
-                                    <div className="space-y-3 min-h-[400px]">
-                                        {column.items.map((item, index) => (
-                                            <Draggable key={item.id} draggableId={item.id} index={index}>
-                                                {(provided, snapshot) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
-                                                        style={{...provided.draggableProps.style}}
-                                                        className={`bg-card p-4 rounded-lg shadow-sm border ${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary' : ''}`}
-                                                    >
-                                                        <div className="flex items-start justify-between">
-                                                          <p className="font-medium break-words pr-2">{item.title}</p>
-                                                          <span title={item.priority + " priority"}>{priorityIcons[item.priority]}</span>
-                                                        </div>
-                                                        {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
-                                                        <div className="flex items-center justify-between mt-3">
-                                                           <Badge variant="secondary" className="gap-1.5 pl-1.5 text-xs">
-                                                                <span title={item.category}>{categoryIcons[item.category]}</span>
-                                                                {item.category}
-                                                            </Badge>
-                                                             <div title={`Assigned to ${item.assigneeName}`}>
-                                                                <Avatar className="h-6 w-6">
-                                                                    <AvatarFallback className="text-xs">{item.assigneeName.split(' ').map(n => n[0]).join('').toUpperCase()}</AvatarFallback>
-                                                                </Avatar>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                        {provided.placeholder}
-                                        {column.items.length === 0 && <div className="text-center text-sm text-muted-foreground pt-16">No tasks here</div>}
-                                    </div>
-                                </div>
-                            )}
-                        </Droppable>
+                        <Column key={columnId} column={column} columnId={columnId} />
                     ))}
                 </div>
             </DragDropContext>
