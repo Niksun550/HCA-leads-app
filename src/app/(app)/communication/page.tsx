@@ -60,8 +60,8 @@ export default function CommunicationPage() {
     const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
       const incomingConvs = snapshot.docs.map(doc => {
         const data = doc.data();
-        // Firestore timestamps need to be manually converted when coming from a function
-        const updatedAt = data.updatedAt ? new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds) : Timestamp.now();
+        // When reading from onSnapshot, the timestamp is already a Firestore Timestamp
+        const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now();
         return { id: doc.id, ...data, updatedAt } as Conversation;
       });
       const previousConversations = conversationsRef.current;
@@ -113,18 +113,19 @@ export default function CommunicationPage() {
         const result = await createConversation({ otherUserId: selectedUser.uid });
         
         const { conversation: convData } = result.data as { conversation: any };
-
-        const updatedAt = convData.updatedAt ? new Timestamp(convData.updatedAt._seconds, convData.updatedAt._nanoseconds) : Timestamp.now();
         
-        const lastMessage = convData.lastMessage ? {
+        // Manually convert plain object timestamps from Firebase function to Firestore Timestamp objects
+        const updatedAt = convData.updatedAt && convData.updatedAt._seconds ? new Timestamp(convData.updatedAt._seconds, convData.updatedAt._nanoseconds) : Timestamp.now();
+        
+        const lastMessage = convData.lastMessage && convData.lastMessage.createdAt && convData.lastMessage.createdAt._seconds ? {
             ...convData.lastMessage,
-            createdAt: convData.lastMessage.createdAt ? new Timestamp(convData.lastMessage.createdAt._seconds, convData.lastMessage.createdAt._nanoseconds) : Timestamp.now()
-        } : null;
+            createdAt: new Timestamp(convData.lastMessage.createdAt._seconds, convData.lastMessage.createdAt._nanoseconds)
+        } : convData.lastMessage;
 
         const conversation: Conversation = {
             ...convData,
             updatedAt,
-            lastMessage
+            lastMessage,
         };
 
         setSelectedConversation(conversation);
