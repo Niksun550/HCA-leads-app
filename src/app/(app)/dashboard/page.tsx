@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, onSnapshot, query, where, getDocs, or } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, or } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles, User as UserIcon } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
@@ -22,6 +22,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { leadStatuses, structureLeadStatuses } from '@/types';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
@@ -43,6 +50,7 @@ export default function DashboardPage() {
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({});
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isReengageDialogOpen, setIsReengageDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('all');
 
 
   const availableStatuses = useMemo(() => {
@@ -130,9 +138,18 @@ export default function DashboardPage() {
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
     if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
-    if (activeFilters.length === availableStatuses.length) return leads;
-    return leads.filter(lead => statusFilters[lead.status]);
-  }, [leads, statusFilters, availableStatuses]);
+
+    let statusFilteredLeads = leads;
+    if (activeFilters.length < availableStatuses.length) {
+        statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
+    }
+    
+    if(user?.role === 'Director' && selectedUserId !== 'all') {
+        return statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
+    }
+    
+    return statusFilteredLeads;
+  }, [leads, statusFilters, availableStatuses, user, selectedUserId]);
 
   const handleExport = () => {
     const dataToExport = filteredLeads.map(lead => ({
@@ -172,12 +189,26 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold font-headline tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {user.displayName}!</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+           {user.role === 'Director' && (
+             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    {allUsers.map(u => (
+                        <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>
+                    ))}
+                </SelectContent>
+             </Select>
+           )}
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <ListFilter className="mr-2 h-4 w-4" />
-                Filter
+                Filter Status
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -214,7 +245,20 @@ export default function DashboardPage() {
       </header>
       
       {user.role === 'Director' ? (
-        <ForecastingDashboard leads={filteredLeads} />
+         <>
+          <StatCards leads={filteredLeads} />
+
+          <div className="grid gap-8 md:grid-cols-5">
+            <div className="md:col-span-3">
+              <ClientLeadsChart leads={filteredLeads} key={filteredLeads.map(l => l.id).join(',') + selectedUserId} />
+            </div>
+            <div className="md:col-span-2">
+              <LeadsMap leads={filteredLeads} />
+            </div>
+          </div>
+          
+          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} onSelectionChange={handleSelectionChange} />
+        </>
       ) : (
         <>
           <StatCards leads={filteredLeads} />
@@ -248,3 +292,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
