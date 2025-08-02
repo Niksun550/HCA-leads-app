@@ -220,48 +220,46 @@ const MobileBottomNav = () => {
     ];
     
     return (
-        <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 sm:hidden">
-            <div className="flex h-full items-center justify-around">
-                {navItems.map(item => (
-                    <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)} unreadCount={item.unreadCount}>
-                        {item.icon}
-                    </MobileBottomNavLink>
-                ))}
-                <Popover>
-                    <PopoverTrigger asChild>
-                         <button className={cn("flex flex-col items-center justify-center flex-1 p-2 rounded-full transition-colors text-muted-foreground hover:text-primary")}>
-                           <MoreHorizontal className="h-6 w-6" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2 mb-2">
-                        <div className="flex flex-col space-y-1">
-                             <div className="flex items-center gap-3 p-2 mb-2 border-b pb-3">
-                                 <Avatar className="h-9 w-9">
-                                  <AvatarImage src={user.photoURL || undefined} data-ai-hint="user avatar" />
-                                  <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col items-start text-left">
-                                  <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                                  <p className="text-xs leading-none text-muted-foreground">
-                                    {user.email}
-                                  </p>
-                                </div>
-                             </div>
-                            <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>
-                            <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
-                            <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>
-                             {user.role === 'Admin' && (
-                                <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>
-                             )}
-                             <DropdownMenuSeparator />
-                             <button onClick={handleLogout} className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors hover:bg-destructive/10 w-full text-left">
-                                <LogOut className="h-5 w-5" />
-                                <span>Log out</span>
-                             </button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
+        <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex sm:hidden items-center justify-around">
+            {navItems.map(item => (
+                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)} unreadCount={item.unreadCount}>
+                    {item.icon}
+                </MobileBottomNavLink>
+            ))}
+            <Popover>
+                <PopoverTrigger asChild>
+                     <button className={cn("flex flex-col items-center justify-center flex-1 p-2 rounded-full transition-colors text-muted-foreground hover:text-primary")}>
+                       <MoreHorizontal className="h-6 w-6" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2 mb-2">
+                    <div className="flex flex-col space-y-1">
+                         <div className="flex items-center gap-3 p-2 mb-2 border-b pb-3">
+                             <Avatar className="h-9 w-9">
+                              <AvatarImage src={user.photoURL || undefined} data-ai-hint="user avatar" />
+                              <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col items-start text-left">
+                              <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                              <p className="text-xs leading-none text-muted-foreground">
+                                {user.email}
+                              </p>
+                            </div>
+                         </div>
+                        <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>
+                        <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
+                        <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>
+                         {user.role === 'Admin' && (
+                            <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>
+                         )}
+                         <DropdownMenuSeparator />
+                         <button onClick={handleLogout} className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors hover:bg-destructive/10 w-full text-left">
+                            <LogOut className="h-5 w-5" />
+                            <span>Log out</span>
+                         </button>
+                    </div>
+                </PopoverContent>
+            </Popover>
         </div>
     )
 }
@@ -299,8 +297,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto p-4 sm:p-8 pb-20 sm:pb-8">
             {children}
         </main>
-         <MobileBottomNav />
       </div>
+      <MobileBottomNav />
     </div>
   );
 }
+
+    
