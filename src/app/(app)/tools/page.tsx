@@ -145,7 +145,7 @@ export default function ToolsPage() {
         setIsGenerating(true);
         try {
             const result = await generateWelcomeMessage({ customerName: "Customer" }); // Generic welcome
-            setMessage(result.welcomeMessage);
+            setMessage(result.welcomeMessage.replace('{{customerName}}', '{{customerName}}')); // Keep placeholder
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Generation Failed', description: error.message || 'An unexpected error occurred.' });
         } finally {
@@ -271,7 +271,7 @@ export default function ToolsPage() {
                                     onChange={(e) => setMessage(e.target.value)}
                                     className="min-h-[120px]"
                                 />
-                                <p className="text-xs text-muted-foreground">The placeholder `{{customerName}}` will be replaced with each customer's name.</p>
+                                <p className="text-xs text-muted-foreground">The placeholder `{{'{'}}{'{'}customerName{'}'}{'}'}` will be replaced with each customer's name.</p>
 
                                 <div className="space-y-2 pt-2">
                                     <Label htmlFor="image-upload-main">Attach Image/Flyer (Optional)</Label>
@@ -319,5 +319,3 @@ export default function ToolsPage() {
         </div>
     );
 }
-
-    
