@@ -1,7 +1,6 @@
-
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Lead } from '@/types';
 import { useMemo } from 'react';
@@ -65,7 +64,11 @@ export default function LeadsChart({ leads }: LeadsChartProps) {
               }}
             />
             <Legend wrapperStyle={{ fontSize: "14px" }}/>
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count" />
+            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Lead Count">
+                {data.map((entry) => (
+                    <Cell key={`cell-${entry.name}`} />
+                ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
