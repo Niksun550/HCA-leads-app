@@ -7,18 +7,18 @@ import { useAuth } from '@/hooks/use-auth';
 import { LoaderCircle } from 'lucide-react';
 
 export default function Home() {
-  const { user, isInitialized } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized) {
+    if (!isLoading) {
       if (user) {
         router.replace('/dashboard');
       } else {
         router.replace('/login');
       }
     }
-  }, [user, isInitialized, router]);
+  }, [user, isLoading, router]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background">

@@ -9,19 +9,19 @@ import type { AppUser } from "@/types";
 
 interface AuthContextType {
   user: (AppUser & { getIdToken: () => Promise<string | null> }) | null;
-  isInitialized: boolean;
+  isLoading: boolean; // Replaces isInitialized for more clarity
   isFirebaseConfigured: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  isInitialized: false,
+  isLoading: true, // Start in a loading state
   isFirebaseConfigured: false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthContextType['user']>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsFirebaseConfigured(isConfigured);
 
     if (!isConfigured || !auth) {
-      setIsInitialized(true);
+      setIsLoading(false);
       return;
     }
 
@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
       }
-      setIsInitialized(true);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isInitialized, isFirebaseConfigured }}>
+    <AuthContext.Provider value={{ user, isLoading, isFirebaseConfigured }}>
       {children}
     </AuthContext.Provider>
   );

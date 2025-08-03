@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -264,16 +265,16 @@ const MobileBottomNav = () => {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isInitialized } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && !user) {
+    if (!isLoading && !user) {
       router.replace('/login');
     }
-  }, [isInitialized, user, router]);
+  }, [isLoading, user, router]);
 
-  if (!isInitialized || !user) {
+  if (isLoading || !user) {
       return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
@@ -301,5 +302,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    
