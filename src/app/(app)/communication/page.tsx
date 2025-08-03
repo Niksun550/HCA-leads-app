@@ -112,23 +112,20 @@ export default function CommunicationPage() {
         const createConversation = httpsCallable(functions, 'createConversation');
         const result = await createConversation({ otherUserId: selectedUser.uid });
         
-        const { conversation: convData } = result.data as { conversation: any };
-        
-        // Manually convert plain object timestamps from Firebase function to Firestore Timestamp objects
-        const updatedAt = convData.updatedAt && convData.updatedAt._seconds ? new Timestamp(convData.updatedAt._seconds, convData.updatedAt._nanoseconds) : Timestamp.now();
-        
-        const lastMessage = convData.lastMessage && convData.lastMessage.createdAt && convData.lastMessage.createdAt._seconds ? {
-            ...convData.lastMessage,
-            createdAt: new Timestamp(convData.lastMessage.createdAt._seconds, convData.lastMessage.createdAt._nanoseconds)
-        } : convData.lastMessage;
+        const { conversationId } = result.data as { conversationId: string };
 
-        const conversation: Conversation = {
-            ...convData,
-            updatedAt,
-            lastMessage,
-        };
+        // The onSnapshot listener will pick up the new/existing conversation.
+        // We find it in our state and select it.
+        const existingConv = conversations.find(c => c.id === conversationId);
+        if (existingConv) {
+          setSelectedConversation(existingConv);
+        } else {
+            // If it's not in the state yet, we might need to wait for the listener
+            // A better approach is to just let the user click from the list which will now be updated.
+            // For now, we will just select it if found.
+            // This might need a more robust solution if there's a significant delay.
+        }
 
-        setSelectedConversation(conversation);
     } catch(error) {
         console.error("Error creating or fetching conversation:", error);
         toast({

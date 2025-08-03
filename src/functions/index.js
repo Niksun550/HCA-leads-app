@@ -66,8 +66,9 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const docSnap = await conversationRef.get();
         
         if (docSnap.exists()) {
-             const existingConversation = docSnap.data();
-             return { conversation: { id: docSnap.id, ...existingConversation } };
+             // If conversation already exists, just return its ID.
+             // The client-side onSnapshot will handle displaying it.
+             return { conversationId: docSnap.id };
         }
 
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
@@ -99,13 +100,8 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         };
 
         await conversationRef.set(newConversation);
-        
-        // The conversation is created, but the client will get the data via its onSnapshot listener.
-        // We can return the ID and basic info. The full object with server timestamp will be synced on the client.
-        const createdConversationData = await conversationRef.get();
 
-
-        return { conversation: { id: conversationId, ...createdConversationData.data() } };
+        return { conversationId: conversationId };
 
     } catch (error) {
         console.error("Error creating conversation:", error);
