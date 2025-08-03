@@ -129,17 +129,14 @@ export default function DashboardPage() {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
     if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
 
-    let statusFilteredLeads = leads;
-    if (activeFilters.length < availableStatuses.length) {
-        statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
-    }
+    const statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
     
     if(user?.role === 'Director' && selectedUserId !== 'all') {
         return statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
     }
     
     return statusFilteredLeads;
-  }, [leads, statusFilters, availableStatuses, user, selectedUserId]);
+  }, [leads, statusFilters, user, selectedUserId]);
 
   const handleExport = () => {
     const dataToExport = filteredLeads.map(lead => ({
