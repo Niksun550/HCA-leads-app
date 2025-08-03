@@ -21,7 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     const { user } = useAuth();
     const router = useRouter();
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isUtilityOpen, setIsUtilityOpen] = useState(pathname.startsWith('/tasks') || pathname.startsWith('/planner'));
 
     useEffect(() => {
         if (!user) return;
@@ -94,10 +96,29 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
               </NavLink>
-              <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
-                <CheckSquare className="h-5 w-5" />
-                Tasks
-              </NavLink>
+
+              <Collapsible open={isUtilityOpen} onOpenChange={setIsUtilityOpen}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>div>svg]:rotate-180">
+                     <div className="flex items-center gap-3">
+                        <ClipboardList className="h-5 w-5" />
+                        Utility
+                     </div>
+                      <div className="flex items-center gap-3">
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                     </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 pt-1">
+                      <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
+                        <CheckSquare className="h-5 w-5 ml-5" />
+                        Tasks
+                      </NavLink>
+                      <NavLink href="/planner" isActive={pathname.startsWith('/planner')} onClick={onLinkClick}>
+                        <CalendarDays className="h-5 w-5 ml-5" />
+                        Planner
+                      </NavLink>
+                  </CollapsibleContent>
+              </Collapsible>
+
               <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
                 <Wrench className="h-5 w-5" />
                 Tools
@@ -105,10 +126,6 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
                 <LayoutGrid className="h-5 w-5" />
                 Board
-              </NavLink>
-               <NavLink href="/planner" isActive={pathname.startsWith('/planner')} onClick={onLinkClick}>
-                <CalendarDays className="h-5 w-5" />
-                Planner
               </NavLink>
                <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick} unreadCount={unreadCount}>
                 <MessageSquare className="h-5 w-5" />
@@ -214,9 +231,8 @@ const MobileBottomNav = () => {
 
     const navItems = [
         { href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
-        { href: "/tasks", icon: <CheckSquare className="h-6 w-6" />, label: "Tasks" },
-        { href: "/communication", icon: <MessageSquare className="h-6 w-6" />, label: "Chat", unreadCount: unreadCount },
         { href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
+        { href: "/communication", icon: <MessageSquare className="h-6 w-6" />, label: "Chat", unreadCount: unreadCount },
     ];
     
     return (
@@ -246,6 +262,7 @@ const MobileBottomNav = () => {
                               </p>
                             </div>
                          </div>
+                        <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>
                         <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>
                         <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
                         <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>
