@@ -48,8 +48,6 @@ export default function DashboardPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({});
-  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
-  const [isReengageDialogOpen, setIsReengageDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('all');
 
 
@@ -127,14 +125,6 @@ export default function DashboardPage() {
     setIsFormOpen(true);
   };
   
-  const handleSelectionChange = useCallback((newSelectedLeads: Lead[]) => {
-    setSelectedLeads(newSelectedLeads);
-  }, []);
-  
-  const droppedLeadsSelected = useMemo(() => {
-    return selectedLeads.length > 0 && selectedLeads.every(l => l.status === 'Dropped');
-  }, [selectedLeads]);
-
   const filteredLeads = useMemo(() => {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
     if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
@@ -225,12 +215,6 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-           {['Admin', 'Director', 'Sales Rep'].includes(user.role) ? (
-              <Button variant="outline" onClick={() => setIsReengageDialogOpen(true)} disabled={!droppedLeadsSelected}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Re-engage
-              </Button>
-           ) : null}
           <Button variant="outline" onClick={handleExport} disabled={filteredLeads.length === 0}>
              <FileSpreadsheet className="mr-2 h-4 w-4" />
              Export
@@ -257,7 +241,7 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} onSelectionChange={handleSelectionChange} />
+          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
         </>
       ) : (
         <>
@@ -272,7 +256,7 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} onSelectionChange={handleSelectionChange} />
+          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
         </>
       )}
 
@@ -283,12 +267,6 @@ export default function DashboardPage() {
         users={allUsers}
       />
       
-      <ReengageDialog
-        isOpen={isReengageDialogOpen}
-        setIsOpen={setIsReengageDialogOpen}
-        leads={selectedLeads}
-       />
-
     </div>
   );
 }

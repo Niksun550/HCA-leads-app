@@ -40,34 +40,11 @@ import {
 interface LeadsTableProps {
   leads: Lead[];
   onEdit: (lead: Lead) => void;
-  onSelectionChange: (leads: Lead[]) => void;
 }
 
-export function LeadsTable({ leads, onEdit, onSelectionChange }: LeadsTableProps) {
+export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
-  
-  const handleSelectAll = (checked: boolean) => {
-    const newSelectedRows: Record<string, boolean> = {};
-    if (checked) {
-      leads.forEach(lead => newSelectedRows[lead.id] = true);
-    }
-    setSelectedRows(newSelectedRows);
-  };
-  
-  const handleSelectRow = (leadId: string, checked: boolean) => {
-    setSelectedRows(prev => ({ ...prev, [leadId]: checked }));
-  };
-
-  useEffect(() => {
-    const selected = leads.filter(lead => selectedRows[lead.id]);
-    onSelectionChange(selected);
-  }, [selectedRows, leads, onSelectionChange]);
-  
-  const isAllSelected = useMemo(() => {
-    return leads.length > 0 && leads.every(lead => selectedRows[lead.id]);
-  }, [leads, selectedRows]);
 
   const handleDelete = async (leadId: string) => {
     const { db } = getFirebaseServices();
@@ -101,13 +78,6 @@ export function LeadsTable({ leads, onEdit, onSelectionChange }: LeadsTableProps
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12">
-                <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                    aria-label="Select all rows"
-                />
-            </TableHead>
             <TableHead>Customer</TableHead>
             <TableHead className="hidden md:table-cell">Assigned To</TableHead>
             <TableHead className="hidden lg:table-cell">Lead Owner</TableHead>
@@ -119,14 +89,7 @@ export function LeadsTable({ leads, onEdit, onSelectionChange }: LeadsTableProps
         <TableBody>
           {leads.length > 0 ? (
             leads.map((lead) => (
-              <TableRow key={lead.id} data-state={selectedRows[lead.id] ? 'selected' : ''}>
-                 <TableCell>
-                    <Checkbox
-                        checked={selectedRows[lead.id] || false}
-                        onCheckedChange={(checked) => handleSelectRow(lead.id, !!checked)}
-                        aria-label={`Select row for ${lead.customerName}`}
-                    />
-                </TableCell>
+              <TableRow key={lead.id}>
                 <TableCell>
                   <div className="font-medium">{lead.customerName}</div>
                   <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
@@ -194,7 +157,7 @@ export function LeadsTable({ leads, onEdit, onSelectionChange }: LeadsTableProps
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={6} className="h-24 text-center">
                 No leads found.
               </TableCell>
             </TableRow>
