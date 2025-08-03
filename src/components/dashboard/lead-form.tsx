@@ -372,8 +372,8 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   return (
     <>
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[800px] grid-rows-[auto_1fr] p-0 max-h-[90vh]">
-        <DialogHeader className="p-6 pb-0 flex flex-row items-start justify-between">
+      <DialogContent className="sm:max-w-[800px] flex flex-col p-0 max-h-[90vh]">
+        <DialogHeader className="p-6 pb-0 flex flex-row items-start justify-between shrink-0">
             <div>
                 <DialogTitle className="font-headline">{lead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
                 <DialogDescription>
@@ -387,9 +387,9 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                 </Button>
             )}
         </DialogHeader>
-        <div className="grid md:grid-cols-2 overflow-hidden">
-            <div className="overflow-y-auto pr-2">
-                <Tabs defaultValue="details" className="p-6">
+        <div className="grid md:grid-cols-2 overflow-y-auto flex-1">
+            <div className="overflow-y-auto px-6 pb-6">
+                <Tabs defaultValue="details">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="details">Details</TabsTrigger>
                         <TabsTrigger value="attachments">Attachments</TabsTrigger>
@@ -656,7 +656,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                         </div>
                     </TabsContent>
                 </Tabs>
-                <div className="p-6 pt-0 flex justify-end gap-2">
+                <div className="p-6 pt-0 mt-4 flex justify-end gap-2 sticky bottom-0 bg-background">
                     <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
                     <Button type="submit" form="lead-form" disabled={isSubmitting || uploadProgress !== null}>
                         {(isSubmitting || uploadProgress !== null) && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
@@ -696,5 +696,3 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     </>
   );
 }
-
-    
