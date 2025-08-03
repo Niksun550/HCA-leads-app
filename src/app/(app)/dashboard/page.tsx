@@ -96,7 +96,8 @@ export default function DashboardPage() {
             where('status', 'in', structureLeadStatuses)
         ));
     } else {
-        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid'));
+        // This is a fallback query that should not return any results
+        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid-user-id'));
     }
 
     const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
@@ -129,10 +130,10 @@ export default function DashboardPage() {
     const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
     if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
 
-    const statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
-    
-    if(user?.role === 'Director' && selectedUserId !== 'all') {
-        return statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
+    let statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
+
+    if (user?.role === 'Director' && selectedUserId !== 'all') {
+        statusFilteredLeads = statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
     }
     
     return statusFilteredLeads;
