@@ -1,10 +1,12 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
-import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
 
-const firebaseConfig: FirebaseOptions = {
+const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -13,39 +15,34 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// This function checks if all the necessary Firebase environment variables are set.
-const isFirebaseConfigured = () => {
-    return (
-        firebaseConfig.apiKey &&
-        firebaseConfig.authDomain &&
-        firebaseConfig.projectId &&
-        firebaseConfig.storageBucket &&
-        firebaseConfig.messagingSenderId &&
-        firebaseConfig.appId
-    );
-};
+function getFirebaseServices() {
+    const isConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
 
-interface FirebaseServices {
-    auth: Auth | null;
-    db: Firestore | null;
-    storage: FirebaseStorage | null;
-    isConfigured: boolean;
-}
-
-// This function initializes and returns the Firebase services.
-export function getFirebaseServices(): FirebaseServices {
-    const configured = isFirebaseConfigured();
-    if (!configured) {
-        if (process.env.NODE_ENV !== 'test') {
-            console.warn("Firebase is not configured. Please check your .env.local file.");
+    if (!isConfigured) {
+        return {
+            isConfigured: false,
+            app: null,
+            auth: null,
+            db: null,
+            storage: null,
+            functions: null,
         }
-        return { auth: null, db: null, storage: null, isConfigured: false };
     }
-
+    
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+    const functions = getFunctions(app);
 
-    return { auth, db, storage, isConfigured: true };
+    if (process.env.NEXT_PUBLIC_USE_EMULATOR === 'true') {
+        connectAuthEmulator(auth, 'http://127.0.0.1:9099');
+        connectFirestoreEmulator(db, '127.0.0.1', 8080);
+        connectStorageEmulator(storage, '127.0.0.1', 9199);
+        connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+    }
+
+    return { isConfigured: true, app, auth, db, storage, functions };
 }
+
+export { getFirebaseServices };
