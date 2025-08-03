@@ -3,90 +3,37 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAuth() {
-      return request.auth != null;
-    }
-
+    
+    // Users can read their own user document and admins can read any.
     match /users/{userId} {
-      allow read: if isAuth();
-      allow write: if isAuth() && request.auth.uid == userId;
-    }
-
-    match /leads/{leadId} {
-      function isOwner() {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isStructureMember() {
-        return request.auth.uid == resource.data.structureTeamMemberId;
-      }
-      
-      function isStructurePendingStatus() {
-          return resource.data.status == 'Structure Pending';
-      }
-
-      function userRole() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      }
-
-      function isAdmin() {
-        return userRole() == 'Admin';
-      }
-      
-      function isDirector() {
-        return userRole() == 'Director';
-      }
-
-      function isViewer() {
-        return userRole() == 'Viewer';
-      }
-      
-      function isStructureUser() {
-          return userRole() == 'Structure';
-      }
-
-      allow create: if isAuth();
-      allow read: if isAuth() && (isAdmin() || isDirector() || isViewer() || isOwner() || (isStructureUser() && (isStructureMember() || isStructurePendingStatus())));
-      allow update, delete: if isAuth() && (isAdmin() || isOwner());
-    }
-
-    match /conversations/{conversationId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.participants;
-      allow create: if isAuth() && request.auth.uid in request.resource.data.participants;
-      allow update: if isAuth() && request.auth.uid in resource.data.participants;
-      
-      match /messages/{messageId} {
-        allow read: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        allow create: if isAuth() && request.auth.uid == request.resource.data.authorId;
-      }
+      allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      allow write: if request.auth.uid == userId;
+      // Allow any authenticated user to create their own user document during signup
+      allow create: if request.auth.uid == userId;
     }
     
+    // Allow users to manage their own leads, with special access for roles.
+    match /leads/{leadId} {
+      allow read, write: if request.auth != null && 
+                          (resource.data.ownerId == request.auth.uid || 
+                           resource.data.structureTeamMemberId == request.auth.uid ||
+                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Viewer', 'Director']);
+      allow create: if request.auth != null;
+    }
+
+    // Allow users to manage their own tasks.
     match /tasks/{taskId} {
-      function isAssignee() {
-        return request.auth.uid == resource.data.assigneeId;
-      }
+      allow read, write: if request.auth != null && resource.data.assigneeId == request.auth.uid;
+      allow create: if request.auth != null;
+    }
+    
+    // Conversations and messages
+    match /conversations/{conversationId} {
+      allow read, write: if request.auth.uid in resource.data.participants;
       
-      function wasCreator() {
-         return request.auth.uid == resource.data.createdBy;
+      match /messages/{messageId} {
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
       }
-      
-      function userRole() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      }
-
-      function isAdmin() {
-        return userRole() == 'Admin';
-      }
-      
-       function isDirector() {
-        return userRole() == 'Director';
-      }
-
-      allow read: if isAuth() && (isAdmin() || isDirector() || isAssignee());
-      allow create: if isAuth();
-      allow update: if isAuth() && (isAdmin() || wasCreator() || isAssignee());
-      allow delete: if isAuth() && (isAdmin() || wasCreator());
     }
   }
 }
