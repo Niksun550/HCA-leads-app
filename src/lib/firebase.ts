@@ -1,12 +1,11 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
+
+import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
-
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -15,34 +14,39 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-function getFirebaseServices() {
-    const isConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+function initializeFirebaseServices() {
+  const isConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
 
-    if (!isConfigured) {
-        return {
-            isConfigured: false,
-            app: null,
-            auth: null,
-            db: null,
-            storage: null,
-            functions: null,
-        }
-    }
-    
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-    const functions = getFunctions(app);
+  if (!isConfigured) {
+    return {
+      isConfigured: false,
+      app: null,
+      auth: null,
+      db: null,
+      storage: null,
+      functions: null,
+    };
+  }
 
-    if (process.env.NEXT_PUBLIC_USE_EMULATOR === 'true') {
-        connectAuthEmulator(auth, 'http://127.0.0.1:9099');
-        connectFirestoreEmulator(db, '127.0.0.1', 8080);
-        connectStorageEmulator(storage, '127.0.0.1', 9199);
-        connectFunctionsEmulator(functions, "127.0.0.1", 5001);
-    }
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+  const functions = getFunctions(app);
 
-    return { isConfigured: true, app, auth, db, storage, functions };
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+      const host = process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
+      console.log(`Using Firebase Emulators at ${host}`);
+      connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+      connectFirestoreEmulator(db, host, 8080);
+      connectStorageEmulator(storage, host, 9199);
+      connectFunctionsEmulator(functions, host, 5001);
+  }
+
+  return { isConfigured: true, app, auth, db, storage, functions };
 }
 
-export { getFirebaseServices };
+// Memoize the result
+const firebaseServices = initializeFirebaseServices();
+
+export const getFirebaseServices = () => firebaseServices;
