@@ -19,6 +19,20 @@ export const AuthContext = createContext<AuthContextType>({
   isFirebaseConfigured: false,
 });
 
+const allAdminPermissions: RolePermissions = {
+    navItems: {
+        dashboard: true,
+        communication: true,
+        utility: true,
+        tasks: true,
+        planner: true,
+        tools: true,
+        board: true,
+        settings: true,
+        admin: true,
+    }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthContextType['user']>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,9 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (userDoc.exists()) {
             const userData = userDoc.data() as AppUser;
             
-            // Fetch role permissions
             let permissions: RolePermissions | undefined = undefined;
-            if (userData.role) {
+
+            if (userData.role === 'Admin') {
+                // Admin gets all permissions by default, ignoring the database document
+                permissions = allAdminPermissions;
+            } else if (userData.role) {
                 try {
                     const permissionDocRef = doc(db, "rolePermissions", userData.role);
                     const permissionDoc = await getDoc(permissionDocRef);
