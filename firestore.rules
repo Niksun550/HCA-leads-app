@@ -1,88 +1,54 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAuth() {
-      return request.auth != null;
-    }
-    
-    function isUser(uid) {
-      return isAuth() && request.auth.uid == uid;
-    }
-    
-    function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isAdmin() {
-      return isAuth() && userRole() == 'Admin';
-    }
-    
-    function isDirector() {
-      return isAuth() && userRole() == 'Director';
+    // Helper function to get user role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    function isViewer() {
-        return isAuth() && userRole() == 'Viewer';
-    }
-
-    function isSalesRep() {
-        return isAuth() && userRole() == 'Sales Rep';
-    }
-
-    function isStructure() {
-        return isAuth() && userRole() == 'Structure';
-    }
-
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Any authenticated user can read their own data.
-      // Admins can read any user's data.
-      allow read: if isUser(userId) || isAdmin();
-      
-      // Any authenticated user can update their own data.
-      // Admins can update any user's data.
-      allow update: if isUser(userId) || isAdmin();
-
-      // Only allow creating a user document if the user is creating their own.
-      allow create: if isUser(userId);
+      // Any authenticated user can list all users to start a conversation
+      allow list: if request.auth != null;
+      // A user can read their own document, or an admin can
+      allow read: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'Admin';
+      // A user can update their own document, or an admin can
+      allow write: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'Admin';
     }
-    
+
+    // Rules for the 'leads' collection
     match /leads/{leadId} {
-      // Admins, Directors, and Viewers can read all leads.
-      // Sales Reps can read leads they own.
-      // Structure members can read leads assigned to them or in their workflow.
-      allow read: if isAdmin() || isDirector() || isViewer() || 
-                  (isSalesRep() && resource.data.ownerId == request.auth.uid) ||
-                  (isStructure() && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']));
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+      function isStructureTeamMember() {
+        return request.auth.uid == resource.data.structureTeamMemberId;
+      }
+      function isPrivilegedUser() {
+        return getUserRole(request.auth.uid) in ['Admin', 'Director', 'Viewer'];
+      }
 
-      // Admins, Directors can write to any lead.
-      // Sales Reps can create/update their own leads.
-      // Structure members can update leads assigned to them.
-      allow write: if isAdmin() || isDirector() ||
-                   (isSalesRep() && (resource == null || resource.data.ownerId == request.auth.uid)) ||
-                   (isStructure() && resource.data.structureTeamMemberId == request.auth.uid);
-                   
-      allow list: if isAdmin() || isDirector() || isViewer();
+      allow read: if isPrivilegedUser() || isOwner() || isStructureTeamMember();
+      allow list: if isPrivilegedUser();
+      allow write: if isPrivilegedUser() || isOwner() || isStructureTeamMember();
+    }
+
+    // Rules for the 'tasks' collection
+    match /tasks/{taskId} {
+       allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
     }
     
-    match /tasks/{taskId} {
-      // Users can read/write tasks assigned to them, or created by them.
-      // Admins/Directors can read all tasks.
-      allow read: if isAdmin() || isDirector() ||
-                  (isAuth() && (resource.data.assigneeId == request.auth.uid || resource.data.createdBy == request.auth.uid));
-      allow write: if isAuth() && (resource == null || resource.data.assigneeId == request.auth.uid || resource.data.createdBy == request.auth.uid);
-    }
-
+    // Rules for the 'conversations' collection and its subcollections
     match /conversations/{conversationId} {
-        // Users can only access conversations they are a part of.
-        allow read, write, delete: if isAuth() && request.auth.uid in resource.data.participants;
-        
-        match /messages/{messageId} {
-             // Users can only read/write messages in conversations they are a part of.
-             allow read, write: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        }
+      // Allow list operations (queries) if the user is a participant
+      allow list: if request.auth.uid in query.filters.participants;
+      // Allow read/write to a specific document if the user is a participant
+      allow read, write: if request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      }
     }
   }
 }
