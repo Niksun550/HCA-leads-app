@@ -13,7 +13,6 @@ import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
 import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
-import ReengageDialog from '@/components/dashboard/reengage-dialog';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -79,17 +78,18 @@ export default function DashboardPage() {
         return;
     }
 
+    setLoading(true);
+
     const usersCollection = collection(db, 'users');
     const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
         const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
         setAllUsers(usersData);
     });
     
-    let leadsQuery;
-    let unsubscribeLeads: () => void;
+    let unsubscribeLeads: () => void = () => {};
 
     if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
-        leadsQuery = query(collection(db, 'leads'));
+        const leadsQuery = query(collection(db, 'leads'));
         unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
           const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
           setLeads(leadsData);
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           setLoading(false);
         });
     } else if (user.role === 'Sales Rep') {
-        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+        const leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
         unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
           const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
           setLeads(leadsData);
@@ -109,46 +109,44 @@ export default function DashboardPage() {
           setLoading(false);
         });
     } else if (user.role === 'Structure') {
-        const fetchStructureLeads = async () => {
-            try {
-                const assignedQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
-                const statusQuery = query(collection(db, 'leads'), where('status', 'in', structureLeadStatuses));
-                
-                const [assignedSnapshot, statusSnapshot] = await Promise.all([
-                    getDocs(assignedQuery),
-                    getDocs(statusQuery)
-                ]);
+        // For structure role, we listen to two separate queries and merge them.
+        const q1 = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
+        const q2 = query(collection(db, 'leads'), where('status', 'in', structureLeadStatuses));
+        
+        const unsub1 = onSnapshot(q1, (assignedSnapshot) => {
+          const assignedLeads = assignedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+          setLeads(prevLeads => {
+            const combined = [...prevLeads.filter(p => p.structureTeamMemberId !== user.uid), ...assignedLeads];
+            const uniqueLeads = Array.from(new Map(combined.map(item => [item['id'], item])).values());
+            return uniqueLeads;
+          });
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching assigned structure leads:", error);
+          setLoading(false);
+        });
 
-                const leadsMap = new Map<string, Lead>();
-                
-                assignedSnapshot.docs.forEach(doc => {
-                    const lead = { id: doc.id, ...doc.data() } as Lead;
-                    leadsMap.set(lead.id, lead);
-                });
+        const unsub2 = onSnapshot(q2, (statusSnapshot) => {
+          const statusLeads = statusSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+           setLeads(prevLeads => {
+            const combined = [...prevLeads.filter(p => !structureLeadStatuses.includes(p.status)), ...statusLeads];
+            const uniqueLeads = Array.from(new Map(combined.map(item => [item['id'], item])).values());
+            return uniqueLeads;
+          });
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching status structure leads:", error);
+          setLoading(false);
+        });
 
-                statusSnapshot.docs.forEach(doc => {
-                    const lead = { id: doc.id, ...doc.data() } as Lead;
-                    leadsMap.set(lead.id, lead);
-                });
-                
-                setLeads(Array.from(leadsMap.values()));
-            } catch (error) {
-                 console.error("Error fetching structure leads:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchStructureLeads();
-        // For structure role, we fetch once as onSnapshot would be complex to manage for two queries.
-        // A more robust real-time solution might involve Cloud Functions or a different data model.
-        unsubscribeLeads = () => {}; 
+        unsubscribeLeads = () => {
+          unsub1();
+          unsub2();
+        }
 
     } else {
-        // This is a fallback query that should not return any results for other roles
         setLeads([]);
         setLoading(false);
-        unsubscribeLeads = () => {};
     }
 
     return () => {
@@ -176,7 +174,7 @@ export default function DashboardPage() {
 
     let statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
 
-    if (user?.role === 'Director' && selectedUserId !== 'all') {
+    if ((user?.role === 'Director' || user?.role === 'Admin') && selectedUserId !== 'all') {
         statusFilteredLeads = statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
     }
     
@@ -222,7 +220,7 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Welcome back, {user.displayName}!</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-           {user.role === 'Director' && (
+           {(user.role === 'Director' || user.role === 'Admin') && (
              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <UserIcon className="mr-2 h-4 w-4" />
@@ -270,7 +268,7 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      {user.role === 'Director' ? (
+      {user.role === 'Director' || user.role === 'Admin' ? (
          <>
           <StatCards leads={filteredLeads} />
 
