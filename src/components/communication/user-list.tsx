@@ -79,9 +79,9 @@ export function UserList({
         />
       </div>
       <Tabs defaultValue="conversations" onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="mx-4 mt-4">
-          <TabsTrigger value="conversations" className="flex-1">Conversations</TabsTrigger>
-          <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
+        <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2">
+          <TabsTrigger value="conversations">Chats</TabsTrigger>
+          <TabsTrigger value="users">New Chat</TabsTrigger>
         </TabsList>
         <ScrollArea className="h-full">
             <TabsContent value="conversations" className="m-0">

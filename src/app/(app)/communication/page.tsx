@@ -116,16 +116,15 @@ export default function CommunicationPage() {
 
         // The onSnapshot listener will pick up the new/existing conversation.
         // We find it in our state and select it.
-        // We add a listener to conversations state to select it once it's available
-        const selectNewConversation = (convs: Conversation[]) => {
-            const conversationToSelect = convs.find(c => c.id === conversationId);
+        const selectNewConversation = () => {
+            const conversationToSelect = conversationsRef.current.find(c => c.id === conversationId);
             if (conversationToSelect) {
                 handleSelectConversation(conversationToSelect);
             }
         };
 
         // We check if it is already in the list.
-        const existingConv = conversations.find(c => c.id === conversationId);
+        const existingConv = conversationsRef.current.find(c => c.id === conversationId);
         if (existingConv) {
           setSelectedConversation(existingConv);
         } else {
@@ -144,12 +143,12 @@ export default function CommunicationPage() {
             }, 100);
         }
 
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error creating or fetching conversation:", error);
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Could not start the conversation.'
+            description: error.message || 'Could not start the conversation.'
         });
     } finally {
         setIsCreatingConversation(false);
