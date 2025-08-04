@@ -5,17 +5,17 @@ import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { getFirebaseServices } from "@/lib/firebase";
-import type { AppUser } from "@/types";
+import type { AppUser, RolePermissions } from "@/types";
 
 interface AuthContextType {
-  user: (AppUser & { getIdToken: () => Promise<string | null> }) | null;
-  isLoading: boolean; // Replaces isInitialized for more clarity
+  user: (AppUser & { getIdToken: () => Promise<string | null>; permissions?: RolePermissions; }) | null;
+  isLoading: boolean;
   isFirebaseConfigured: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  isLoading: true, // Start in a loading state
+  isLoading: true,
   isFirebaseConfigured: false,
 });
 
@@ -38,18 +38,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
-
+          
           const getIdToken = () => firebaseUser.getIdToken();
 
           if (userDoc.exists()) {
-            const userData = userDoc.data();
+            const userData = userDoc.data() as AppUser;
+            
+            // Fetch role permissions
+            let permissions: RolePermissions | undefined = undefined;
+            if (userData.role) {
+                try {
+                    const permissionDocRef = doc(db, "rolePermissions", userData.role);
+                    const permissionDoc = await getDoc(permissionDocRef);
+                    if(permissionDoc.exists()) {
+                        permissions = permissionDoc.data() as RolePermissions;
+                    } else {
+                        console.warn(`No permission document found for role: ${userData.role}`);
+                    }
+                } catch(permError) {
+                    console.error("Error fetching role permissions:", permError);
+                }
+            }
+            
             setUser({
+              ...userData,
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName,
-              role: userData.role || 'Viewer', // Default to 'Viewer' if role not set
               photoURL: firebaseUser.photoURL || userData.photoURL,
               getIdToken,
+              permissions,
             });
           } else {
             console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);

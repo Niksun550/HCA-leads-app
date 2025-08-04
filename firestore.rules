@@ -3,33 +3,65 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isAppUser() {
-      return request.auth != null;
+  
+    // Helper function to check if a user has a specific role.
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
+    // USERS
+    // Users can read their own document.
+    // Admins can read and write any user document.
     match /users/{userId} {
-      allow read: if isAppUser();
-      allow write: if request.auth.uid == userId;
+      allow read: if request.auth.uid == userId || hasRole('Admin');
+      allow write: if hasRole('Admin');
+      allow create: if request.auth.uid == userId;
     }
-    
+
+    // ROLE PERMISSIONS
+    // Admins can read and write all role permissions.
+    // Authenticated users can read the permissions for their own role.
+    match /rolePermissions/{role} {
+       allow read: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+       allow list, write: if hasRole('Admin');
+    }
+
+    // LEADS
+    // Admins, Directors, and Viewers can list and read all leads.
+    // Sales Reps can only read leads they own.
+    // Structure members can read leads assigned to them OR leads with a structure-related status.
+    // Sales Reps can create leads. Admins and Directors can write to any lead.
     match /leads/{leadId} {
-      allow read, write: if request.auth != null; // Simplistic rule for now, can be refined
-    }
-
-    match /tasks/{taskId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.assigneeId;
-      allow create: if request.auth != null;
-    }
-
-    match /conversations/{conversationId} {
-      allow list, read, update, delete: if request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null;
+      allow list, read: if hasRole('Admin') || hasRole('Director') || hasRole('Viewer');
+      allow read: if request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.structureTeamMemberId;
+      allow read: if hasRole('Structure') && resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send'];
+      
+      allow create: if hasRole('Sales Rep') || hasRole('Admin') || hasRole('Director');
+      allow update: if hasRole('Admin') || hasRole('Director') || hasRole('Structure') || request.auth.uid == resource.data.ownerId;
+      allow delete: if hasRole('Admin');
     }
     
-    match /conversations/{conversationId}/messages/{messageId} {
-      allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+    // TASKS
+    // Users can read/write tasks assigned to them or created by them.
+    // Admins/Directors can read all tasks.
+    match /tasks/{taskId} {
+      allow list, read: if hasRole('Admin') || hasRole('Director');
+      allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth.uid != null;
     }
+    
+    // CONVERSATIONS
+    // Users can create conversations.
+    // Users can only access conversations they are a part of.
+    match /conversations/{conversationId} {
+        allow create: if request.auth != null;
+        allow list, read, update: if request.auth.uid in resource.data.participants;
 
+        // Messages
+        // Users can read/write messages in conversations they are a part of.
+        match /messages/{messageId} {
+            allow read, write: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        }
+    }
   }
 }

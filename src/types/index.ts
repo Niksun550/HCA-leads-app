@@ -12,6 +12,20 @@ export interface AppUser {
   photoURL?: string | null;
 }
 
+export interface RolePermissions {
+    navItems: {
+        dashboard?: boolean;
+        communication?: boolean;
+        utility?: boolean;
+        tasks?: boolean;
+        planner?: boolean;
+        tools?: boolean;
+        board?: boolean;
+        settings?: boolean;
+        admin?: boolean;
+    }
+}
+
 export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Site Visit Done' | 'IN Design' | 'Quotation Send' | 'Closed' | 'Dropped';
 export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send', 'Closed', 'Dropped'];
 

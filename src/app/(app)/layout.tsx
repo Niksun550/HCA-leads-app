@@ -57,6 +57,8 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     }
     
     if (!user) return null;
+    
+    const navItems = user?.permissions?.navItems;
 
     return (
         <>
@@ -67,50 +69,64 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
               </Link>
             </div>
             <nav className="flex-1 flex flex-col gap-2 p-4">
-              <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')} onClick={onLinkClick}>
-                <LayoutDashboard className="h-5 w-5" />
-                Dashboard
-              </NavLink>
-              <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
-                <MessageCircle className="h-5 w-5" />
-                Communication
-              </NavLink>
-              <Collapsible open={isUtilityOpen} onOpenChange={setIsUtilityOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>div>svg]:rotate-180">
-                     <div className="flex items-center gap-3">
-                        <ClipboardList className="h-5 w-5" />
-                        Utility
-                     </div>
-                      <div className="flex items-center gap-3">
-                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                     </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1 pt-1">
-                      <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
-                        <CheckSquare className="h-5 w-5 ml-5" />
-                        Tasks
-                      </NavLink>
-                      <NavLink href="/planner" isActive={pathname.startsWith('/planner')} onClick={onLinkClick}>
-                        <CalendarDays className="h-5 w-5 ml-5" />
-                        Planner
-                      </NavLink>
-                  </CollapsibleContent>
-              </Collapsible>
-              {user.role !== 'Structure' && (
+              {navItems?.dashboard && (
+                <NavLink href="/dashboard" isActive={pathname.startsWith('/dashboard')} onClick={onLinkClick}>
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
+                </NavLink>
+              )}
+              {navItems?.communication && (
+                <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
+                    <MessageCircle className="h-5 w-5" />
+                    Communication
+                </NavLink>
+              )}
+              {navItems?.utility && (
+                <Collapsible open={isUtilityOpen} onOpenChange={setIsUtilityOpen}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>div>svg]:rotate-180">
+                       <div className="flex items-center gap-3">
+                          <ClipboardList className="h-5 w-5" />
+                          Utility
+                       </div>
+                        <div className="flex items-center gap-3">
+                          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                       </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 pt-1">
+                        {navItems.tasks && (
+                          <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')} onClick={onLinkClick}>
+                            <CheckSquare className="h-5 w-5 ml-5" />
+                            Tasks
+                          </NavLink>
+                        )}
+                        {navItems.planner && (
+                          <NavLink href="/planner" isActive={pathname.startsWith('/planner')} onClick={onLinkClick}>
+                            <CalendarDays className="h-5 w-5 ml-5" />
+                            Planner
+                          </NavLink>
+                        )}
+                    </CollapsibleContent>
+                </Collapsible>
+              )}
+              {navItems?.tools && (
                 <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
                     <Wrench className="h-5 w-5" />
                     Tools
                 </NavLink>
               )}
-               <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
-                <LayoutGrid className="h-5 w-5" />
-                Board
-              </NavLink>
-              <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
-                <Settings className="h-5 w-5" />
-                Settings
-              </NavLink>
-              {user.role === 'Admin' && (
+               {navItems?.board && (
+                 <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
+                    <LayoutGrid className="h-5 w-5" />
+                    Board
+                 </NavLink>
+               )}
+              {navItems?.settings && (
+                <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
+                    <Settings className="h-5 w-5" />
+                    Settings
+                </NavLink>
+              )}
+              {navItems?.admin && (
                 <NavLink href="/admin" isActive={pathname.startsWith('/admin')} onClick={onLinkClick}>
                     <Shield className="h-5 w-5" />
                     Admin
@@ -180,17 +196,20 @@ const MobileBottomNav = () => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase();
     }
 
-    if (!user) return null;
+    if (!user || !user.permissions) return null;
+    
+    const navItems = user.permissions.navItems;
 
-    const navItems = [
-        { href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
-        { href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Chat" },
-        { href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
-    ];
+    const mainNavItems = [
+        { key: 'dashboard', href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
+        { key: 'communication', href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Chat" },
+        { key: 'board', href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
+    ].filter(item => navItems[item.key as keyof typeof navItems]);
+
     
     return (
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex sm:hidden items-center justify-around">
-            {navItems.map(item => (
+            {mainNavItems.map(item => (
                 <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)}>
                     {item.icon}
                 </MobileBottomNavLink>
@@ -215,15 +234,11 @@ const MobileBottomNav = () => {
                               </p>
                             </div>
                          </div>
-                        <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>
-                        <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>
-                        {user.role !== 'Structure' && (
-                            <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
-                        )}
-                        <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>
-                         {user.role === 'Admin' && (
-                            <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>
-                         )}
+                        {navItems.tasks && <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>}
+                        {navItems.planner && <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>}
+                        {navItems.tools && <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>}
+                        {navItems.settings && <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>}
+                        {navItems.admin && <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>}
                          <DropdownMenuSeparator />
                          <button onClick={handleLogout} className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors hover:bg-destructive/10 w-full text-left">
                             <LogOut className="h-5 w-5" />
