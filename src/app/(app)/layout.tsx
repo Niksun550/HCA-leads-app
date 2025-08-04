@@ -96,11 +96,12 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                       </NavLink>
                   </CollapsibleContent>
               </Collapsible>
-
-              <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
-                <Wrench className="h-5 w-5" />
-                Tools
-              </NavLink>
+              {user.role !== 'Structure' && (
+                <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
+                    <Wrench className="h-5 w-5" />
+                    Tools
+                </NavLink>
+              )}
                <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
                 <LayoutGrid className="h-5 w-5" />
                 Board
@@ -216,7 +217,9 @@ const MobileBottomNav = () => {
                          </div>
                         <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>
                         <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>
-                        <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
+                        {user.role !== 'Structure' && (
+                            <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>
+                        )}
                         <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>
                          {user.role === 'Admin' && (
                             <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>
