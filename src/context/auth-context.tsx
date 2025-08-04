@@ -19,6 +19,20 @@ export const AuthContext = createContext<AuthContextType>({
   isFirebaseConfigured: false,
 });
 
+const defaultPermissions: RolePermissions = {
+    navItems: {
+        dashboard: true,
+        communication: true,
+        utility: true,
+        tasks: true,
+        planner: true,
+        tools: true,
+        board: true,
+        settings: true,
+        admin: false,
+    }
+};
+
 const allAdminPermissions: RolePermissions = {
     navItems: {
         dashboard: true,
@@ -54,11 +68,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            const userData = userDoc.data() as AppUser;
+            let userData = userDoc.data() as AppUser;
             
-            // Admins get all permissions, everyone else gets what's on their user document
             if (userData.role === 'Admin') {
                 userData.permissions = allAdminPermissions;
+            } else if (!userData.permissions) {
+                // If a user exists but has no permissions object, give them defaults.
+                // This handles users created before the permissions feature was added.
+                userData.permissions = defaultPermissions;
             }
             
             setUser({
@@ -69,13 +86,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               photoURL: firebaseUser.photoURL || userData.photoURL,
             });
           } else {
-            console.warn(`No user document found for UID: ${firebaseUser.uid}.`);
+             // This case is unlikely if registration is always creating a doc,
+             // but as a fallback, create a user object with default permissions.
+             console.warn(`No user document found for UID: ${firebaseUser.uid}. Using default permissions.`);
              setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
               role: 'Sales Rep', // Fallback role
               photoURL: firebaseUser.photoURL,
+              permissions: defaultPermissions
             });
           }
         } catch (error) {
