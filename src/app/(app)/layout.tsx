@@ -6,12 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseServices } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from "@/hooks/use-auth";
-import type { Conversation } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, MessageSquare, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NavLink = ({ href, children, isActive, onClick, unreadCount }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void, unreadCount?: number }) => (
+const NavLink = ({ href, children, isActive, onClick }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void }) => (
   <Link
     href={href}
     onClick={onClick}
@@ -38,9 +35,6 @@ const NavLink = ({ href, children, isActive, onClick, unreadCount }: { href: str
     <div className="flex items-center gap-3">
         {children}
     </div>
-    {unreadCount !== undefined && unreadCount > 0 && (
-        <Badge className="h-6 w-6 shrink-0 justify-center rounded-full p-0">{unreadCount}</Badge>
-    )}
   </Link>
 );
 
@@ -48,26 +42,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     const pathname = usePathname();
     const { user } = useAuth();
     const router = useRouter();
-    const [unreadCount, setUnreadCount] = useState(0);
     const [isUtilityOpen, setIsUtilityOpen] = useState(pathname.startsWith('/tasks') || pathname.startsWith('/planner'));
-
-    useEffect(() => {
-        if (!user) return;
-        const { db } = getFirebaseServices();
-        if (!db) return;
-
-        const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            let totalUnread = 0;
-            snapshot.forEach(doc => {
-                const conv = doc.data() as Omit<Conversation, 'id'>;
-                totalUnread += conv.unreadCounts?.[user.uid] || 0;
-            });
-            setUnreadCount(totalUnread);
-        });
-
-        return () => unsubscribe();
-    }, [user]);
 
     const handleLogout = async () => {
         const { auth } = getFirebaseServices();
@@ -127,10 +102,6 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                 <LayoutGrid className="h-5 w-5" />
                 Board
               </NavLink>
-               <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick} unreadCount={unreadCount}>
-                <MessageSquare className="h-5 w-5" />
-                Communication
-              </NavLink>
               <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
                 <Settings className="h-5 w-5" />
                 Settings
@@ -179,13 +150,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     );
 };
 
-const MobileBottomNavLink = ({ href, children, isActive, unreadCount }: { href: string; children: React.ReactNode; isActive: boolean; unreadCount?: number }) => (
+const MobileBottomNavLink = ({ href, children, isActive }: { href: string; children: React.ReactNode; isActive: boolean; }) => (
     <Link href={href} className={cn("flex flex-col items-center justify-center flex-1 p-2 rounded-full transition-colors", isActive ? "text-primary" : "text-muted-foreground hover:text-primary")}>
         <div className="relative">
             {children}
-            {unreadCount !== undefined && unreadCount > 0 && (
-                <Badge className="absolute -top-1 -right-2 h-4 w-4 shrink-0 justify-center rounded-full p-0 text-xs">{unreadCount}</Badge>
-            )}
         </div>
     </Link>
 );
@@ -195,25 +163,6 @@ const MobileBottomNav = () => {
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useAuth();
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    useEffect(() => {
-        if (!user) return;
-        const { db } = getFirebaseServices();
-        if (!db) return;
-
-        const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            let totalUnread = 0;
-            snapshot.forEach(doc => {
-                const conv = doc.data() as Omit<Conversation, 'id'>;
-                totalUnread += conv.unreadCounts?.[user.uid] || 0;
-            });
-            setUnreadCount(totalUnread);
-        });
-
-        return () => unsubscribe();
-    }, [user]);
     
      const handleLogout = async () => {
         const { auth } = getFirebaseServices();
@@ -232,13 +181,12 @@ const MobileBottomNav = () => {
     const navItems = [
         { href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
         { href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
-        { href: "/communication", icon: <MessageSquare className="h-6 w-6" />, label: "Chat", unreadCount: unreadCount },
     ];
     
     return (
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex sm:hidden items-center justify-around">
             {navItems.map(item => (
-                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)} unreadCount={item.unreadCount}>
+                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)}>
                     {item.icon}
                 </MobileBottomNavLink>
             ))}

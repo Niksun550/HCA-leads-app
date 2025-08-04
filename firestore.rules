@@ -4,51 +4,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users:
-    // - Authenticated users can read their own user document.
-    // - Authenticated users can list all users to start a conversation.
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth.uid == userId;
     }
+    
+    match /leads/{leadId} {
+        allow read, write: if request.auth != null; // Broad access, refine if needed
 
-    // Conversations:
-    // - Users can create conversations.
-    // - Users can read/write messages in conversations they are a part of.
-    match /conversations/{conversationId} {
-      allow create: if request.auth != null;
-      allow list, read, update: if request.auth.uid in resource.data.participants;
-      
-      match /messages/{messageId} {
-        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-      }
+        match /messages/{messageId} {
+            allow read, create: if request.auth != null && exists(/databases/$(database)/documents/leads/$(leadId));
+        }
     }
     
-    // Leads:
-    // Admins and Directors can do anything.
-    // Sales Reps can create, read, and update leads they own.
-    // Viewers can only read.
-    // Structure team members can read/update leads assigned to them or in structure-specific statuses.
-    match /leads/{leadId} {
-      allow read, write: if request.auth.token.role == 'Admin' || request.auth.token.role == 'Director';
-      
-      allow create: if request.auth.token.role == 'Sales Rep';
-      
-      allow read, update: if request.auth.token.role == 'Sales Rep' && resource.data.ownerId == request.auth.uid;
-      
-      allow read: if request.auth.token.role == 'Viewer';
-      
-      allow read, update: if request.auth.token.role == 'Structure' && 
-                            (resource.data.structureTeamMemberId == request.auth.uid || 
-                             resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']);
-    }
-
-    // Tasks:
-    // Users can create tasks.
-    // Users can read, update, and delete tasks assigned to them.
     match /tasks/{taskId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.assigneeId;
       allow create: if request.auth != null;
-      allow read, update, delete: if request.auth.uid == resource.data.assigneeId;
     }
   }
 }
