@@ -82,7 +82,6 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const otherUserData = otherUserDoc.data() || {};
         
         const newConversation = {
-            id: conversationId,
             participants: sortedParticipants,
             participantNames: {
                 [currentUserId]: currentUserData.displayName || currentUserData.email || 'User',
