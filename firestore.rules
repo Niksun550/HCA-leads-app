@@ -1,25 +1,70 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
+    // Helper function to check user roles
     function isUserOneOfRoles(roles) {
       return request.auth.token.role in roles;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
+      // Allow list for certain roles to populate dropdowns, etc.
+      allow list: if isUserOneOfRoles(['Admin', 'Sales Rep', 'Director']);
+
+      // Allow read access to a user's own document, or for Admins to read any document.
       allow read: if request.auth.uid == userId || isUserOneOfRoles(['Admin']);
+      
+      // Allow write access only to a user's own document.
       allow write: if request.auth.uid == userId;
+      
+      // Allow Admins to update any user document (e.g., for changing roles/permissions)
+      allow update: if isUserOneOfRoles(['Admin']);
+      
+      // Only Admins can delete users.
+      allow delete: if isUserOneOfRoles(['Admin']);
     }
 
+    // Rules for the 'leads' collection
     match /leads/{leadId} {
-      allow create;
-      allow read, update, delete: if request.auth.uid == resource.data.ownerId;
+       allow list: if isUserOneOfRoles(['Admin', 'Viewer', 'Director', 'Sales Rep', 'Structure']);
+       
+       allow read: if request.auth.uid == resource.data.ownerId 
+                    || request.auth.uid == resource.data.structureTeamMemberId 
+                    || isUserOneOfRoles(['Admin', 'Viewer', 'Director'])
+                    || (isUserOneOfRoles(['Structure']) && resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send']);
+       
+       allow create, update, delete: if request.auth.uid == resource.data.ownerId 
+                                     || request.auth.uid == resource.data.structureTeamMemberId
+                                     || isUserOneOfRoles(['Admin']);
     }
 
+    // Rules for the 'tasks' collection
     match /tasks/{taskId} {
-      allow create;
-      allow read, update, delete: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
+       allow read: if request.auth.uid == resource.data.assigneeId 
+                    || request.auth.uid == resource.data.createdBy
+                    || isUserOneOfRoles(['Admin', 'Viewer', 'Director']);
+
+       allow write: if request.auth.uid == resource.data.assigneeId 
+                     || request.auth.uid == resource.data.createdBy;
+    }
+
+    // Rules for the 'conversations' collection
+    match /conversations/{conversationId} {
+        allow read, write: if request.auth.uid in resource.data.participants;
+
+        // Rules for the 'messages' subcollection
+        match /messages/{messageId} {
+            allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        }
+    }
+    
+    // Rules for the 'audit_logs' collection
+    match /audit_logs/{logId} {
+        allow create: if request.auth != null;
+        allow read: if isUserOneOfRoles(['Admin']);
     }
   }
 }
