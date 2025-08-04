@@ -56,6 +56,14 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
     }
 
     const currentUserId = context.auth.uid;
+
+    if (currentUserId === otherUserId) {
+      throw new functions.https.HttpsError(
+            'invalid-argument',
+            'You cannot create a conversation with yourself.'
+        );
+    }
+    
     const db = admin.firestore();
 
     try {
@@ -78,8 +86,8 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('not-found', 'One or more users not found.');
         }
 
-        const currentUserData = currentUserDoc.data();
-        const otherUserData = otherUserDoc.data();
+        const currentUserData = currentUserDoc.data() || {};
+        const otherUserData = otherUserDoc.data() || {};
         
         const newConversation = {
             id: conversationId,
