@@ -216,7 +216,7 @@ const AdminPage = () => {
         try {
             const userDocRef = doc(db, 'users', editingUser.uid);
             await updateDoc(userDocRef, {
-                'permissions.navItems': userPermissions,
+                permissions: { navItems: userPermissions },
             });
             
             setUsers(prevUsers =>
