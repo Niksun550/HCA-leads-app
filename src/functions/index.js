@@ -6,9 +6,17 @@ const cors = require('cors')({ origin: true });
 admin.initializeApp();
 
 exports.deleteUser = functions.https.onCall(async (data, context) => {
-  // Check if the request is authenticated and the user is an admin.
-  if (!context.auth || context.auth.token.role !== 'Admin') {
+  if (!context.auth) {
     throw new functions.https.HttpsError(
+      'unauthenticated',
+      'You must be logged in to perform this action.'
+    );
+  }
+
+  // Check if the user is an admin by reading their document from Firestore.
+  const adminUserDoc = await admin.firestore().collection('users').doc(context.auth.uid).get();
+  if (!adminUserDoc.exists || adminUserDoc.data().role !== 'Admin') {
+     throw new functions.https.HttpsError(
       'permission-denied',
       'You must be an admin to perform this action.'
     );
