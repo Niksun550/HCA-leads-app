@@ -164,9 +164,6 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   }, [lead, user, form, isOpen]);
 
   useEffect(() => {
-    if (status !== 'Visited') {
-      form.setValue('visitDates', []);
-    }
     if (status !== 'Structure Pending' && !isStructureForm) {
       form.setValue('structureTeamMemberId', null);
     }
@@ -520,13 +517,13 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
 
                                 <FormField name="visitDates" control={form.control} render={({ field }) => (
                                 <FormItem className="flex flex-col">
-                                    <FormLabel className={cn(status !== 'Visited' && "text-muted-foreground/50")}>Visit Dates</FormLabel>
+                                    <FormLabel>Visit Dates</FormLabel>
                                     <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
                                         type="button"
                                         variant="outline"
-                                        disabled={status !== 'Visited' || isStructureForm}
+                                        disabled={isStructureForm}
                                         className={cn(
                                             "justify-start text-left font-normal",
                                             !field.value?.length && "text-muted-foreground"
@@ -553,7 +550,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                                         {field.value.map((date, i) => (
                                             <Badge key={i} className="flex items-center gap-1">
                                                 {format(date, 'PPP')}
-                                                <button type="button" disabled={status !== 'Visited' || isStructureForm} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
+                                                <button type="button" disabled={isStructureForm} onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))} className="rounded-full hover:bg-muted-foreground/20">
                                                     <X className="h-3 w-3"/>
                                                 </button>
                                             </Badge>
