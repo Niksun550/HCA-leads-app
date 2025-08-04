@@ -67,10 +67,10 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         
         if (docSnap.exists()) {
              // If conversation already exists, just return its ID.
-             // The client-side onSnapshot will handle displaying it.
              return { conversationId: docSnap.id };
         }
 
+        // If it doesn't exist, create it.
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
         const otherUserDoc = await db.collection('users').doc(otherUserId).get();
 
