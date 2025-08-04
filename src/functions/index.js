@@ -59,7 +59,8 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
     const db = admin.firestore();
 
     try {
-        const sortedParticipants = [currentUserId, otherUserId].sort();
+        const participants = [currentUserId, otherUserId];
+        const sortedParticipants = [...participants].sort();
         const conversationId = sortedParticipants.join('_');
         const conversationRef = db.collection('conversations').doc(conversationId);
         
@@ -82,6 +83,7 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const otherUserData = otherUserDoc.data() || {};
         
         const newConversation = {
+            id: conversationId,
             participants: sortedParticipants,
             participantNames: {
                 [currentUserId]: currentUserData.displayName || currentUserData.email || 'User',
