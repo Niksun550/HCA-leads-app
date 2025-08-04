@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, UserRole } from '@/types';
 import { userRoles } from '@/types';
@@ -63,7 +64,6 @@ const AdminPage = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
-    const deleteUserFunctionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net/deleteUser`;
 
     useEffect(() => {
         if (isInitialized) {
@@ -138,20 +138,9 @@ const AdminPage = () => {
 
       setIsDeleting(true);
       try {
-        const idToken = await user.getIdToken();
-        const response = await fetch(deleteUserFunctionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ uid: userToDelete.uid }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Failed to delete user.');
-        }
+        const functions = getFunctions();
+        const deleteUserFn = httpsCallable(functions, 'deleteUser');
+        await deleteUserFn({ uid: userToDelete.uid });
         
         setUsers(prevUsers => prevUsers.filter(u => u.uid !== userToDelete.uid));
         toast({
@@ -163,7 +152,7 @@ const AdminPage = () => {
          toast({
             variant: 'destructive',
             title: 'Deletion Failed',
-            description: error.message,
+            description: error.message || 'An unexpected error occurred.',
         });
       } finally {
         setIsDeleting(false);
