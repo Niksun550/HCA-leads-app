@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare, Info, RefreshCw } from "lucide-react";
+import { LoaderCircle, Wand2, Clipboard, ClipboardCheck, Users, Upload, FileText, Bot, Type, Image as ImageIcon, MessageSquare, Info, RefreshCw, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +35,7 @@ interface CampaignLead {
     customerName: string;
     mobileNumber?: string;
     propertyType: PropertyType;
+    status: LeadStatus;
 }
 
 interface GeneratedTextContent {
@@ -80,7 +81,7 @@ const LeadCheckboxList = ({ leads, selectedLeads, onSelectLead }: { leads: Campa
 export default function ToolsPage() {
     const { user, isInitialized } = useAuth();
     const { toast } = useToast();
-    const [dbLeads, setDbLeads] = useState<CampaignLead[]>([]);
+    const [allDbLeads, setAllDbLeads] = useState<CampaignLead[]>([]);
     const [uploadedLeads, setUploadedLeads] = useState<CampaignLead[]>([]);
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
@@ -94,8 +95,6 @@ export default function ToolsPage() {
     const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">("New");
     
     // Re-engage State
-    const [reengageLoading, setReengageLoading] = useState(true);
-    const [droppedLeads, setDroppedLeads] = useState<CampaignLead[]>([]);
     const [selectedDroppedLeads, setSelectedDroppedLeads] = useState<Record<string, boolean>>({});
     const [isReEngaging, setIsReEngaging] = useState(false);
     const [generatedText, setGeneratedText] = useState<GeneratedTextContent[] | null>(null);
@@ -105,7 +104,7 @@ export default function ToolsPage() {
     const [customMessage, setCustomMessage] = useState("");
 
 
-    // Effect for Marketing Campaign leads
+    // Fetch all leads once on component mount
     useEffect(() => {
         if (!isInitialized || !user) {
             if (isInitialized) setLoading(false);
@@ -113,67 +112,46 @@ export default function ToolsPage() {
         }
 
         setLoading(true);
-        setSelectedLeads({}); 
         const { db } = getFirebaseServices();
         if (!db) {
             setLoading(false);
             return;
         }
 
-        let leadsQuery: Query;
-        if (statusFilter === "All") {
-            leadsQuery = query(collection(db, 'leads'));
-        } else {
-            leadsQuery = query(collection(db, 'leads'), where('status', '==', statusFilter));
-        }
-
-        const unsubscribe = onSnapshot(leadsQuery, (snapshot) => {
-            const leadsData = snapshot.docs.map(doc => {
-                const data = doc.data() as Lead;
-                return { id: doc.id, customerName: data.customerName, mobileNumber: data.mobileNumber, propertyType: data.propertyType };
-            });
-            setDbLeads(leadsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching leads:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [user, isInitialized, statusFilter]);
-
-    // Effect for Re-engage leads (only 'Dropped' status)
-     useEffect(() => {
-        if (!isInitialized || !user) {
-            if (isInitialized) setReengageLoading(false);
-            return;
-        }
-
-        setReengageLoading(true);
-        setSelectedDroppedLeads({});
-        const { db } = getFirebaseServices();
-        if (!db) {
-            setReengageLoading(false);
-            return;
-        }
-
-        const leadsQuery = query(collection(db, 'leads'), where('status', '==', 'Dropped'));
+        const leadsQuery = query(collection(db, 'leads'));
         
         const unsubscribe = onSnapshot(leadsQuery, (snapshot) => {
             const leadsData = snapshot.docs.map(doc => {
                 const data = doc.data() as Lead;
-                return { id: doc.id, customerName: data.customerName, mobileNumber: data.mobileNumber, propertyType: data.propertyType };
+                return { 
+                    id: doc.id, 
+                    customerName: data.customerName, 
+                    mobileNumber: data.mobileNumber, 
+                    propertyType: data.propertyType,
+                    status: data.status,
+                };
             });
-            setDroppedLeads(leadsData);
-            setReengageLoading(false);
+            setAllDbLeads(leadsData);
+            setLoading(false);
         }, (error) => {
-            console.error("Error fetching dropped leads:", error);
-            setReengageLoading(false);
+            console.error("Error fetching all leads:", error);
+            setLoading(false);
         });
 
         return () => unsubscribe();
     }, [user, isInitialized]);
 
+    
+    const marketingDbLeads = useMemo(() => {
+        if (statusFilter === 'All') return allDbLeads;
+        return allDbLeads.filter(lead => lead.status === statusFilter);
+    }, [allDbLeads, statusFilter]);
+    
+    const droppedLeads = useMemo(() => {
+        return allDbLeads.filter(lead => lead.status === 'Dropped');
+    }, [allDbLeads]);
+    
+    
     const handleSelectLead = (leadId: string, checked: boolean) => {
         setSelectedLeads(prev => ({ ...prev, [leadId]: checked }));
     };
@@ -213,7 +191,8 @@ export default function ToolsPage() {
                     id: `file-${index}-${row[nameKey]}`,
                     customerName: String(row[nameKey]),
                     mobileNumber: mobileKey ? String(row[mobileKey]).replace(/\D/g, '') : undefined,
-                    propertyType: (propertyTypeKey && propertyTypes.includes(row[propertyTypeKey])) ? row[propertyTypeKey] : 'Residential'
+                    propertyType: (propertyTypeKey && propertyTypes.includes(row[propertyTypeKey])) ? row[propertyTypeKey] : 'Residential',
+                    status: 'New' // Assign a default status for uploaded leads
                 }));
                 
                 setUploadedLeads(newLeads);
@@ -240,9 +219,9 @@ export default function ToolsPage() {
     // --- Marketing Campaign Logic ---
     const selectedCampaignLeadIds = Object.keys(selectedLeads).filter(id => selectedLeads[id]);
     const campaignLeadsToProcess = useMemo(() => {
-        const allLeads = [...dbLeads, ...uploadedLeads];
+        const allLeads = [...marketingDbLeads, ...uploadedLeads];
         return allLeads.filter(lead => selectedCampaignLeadIds.includes(lead.id));
-    }, [dbLeads, uploadedLeads, selectedCampaignLeadIds]);
+    }, [marketingDbLeads, uploadedLeads, selectedCampaignLeadIds]);
 
     const handleGenerateAIWelcome = async () => {
         setIsGenerating(true);
@@ -412,8 +391,8 @@ export default function ToolsPage() {
                                                     <div className="space-y-4">
                                                         <Skeleton className="h-6 w-3/4" /><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-1/2" />
                                                     </div>
-                                                ) : dbLeads.length > 0 ? (
-                                                    <LeadCheckboxList leads={dbLeads} selectedLeads={selectedLeads} onSelectLead={handleSelectLead} />
+                                                ) : marketingDbLeads.length > 0 ? (
+                                                    <LeadCheckboxList leads={marketingDbLeads} selectedLeads={selectedLeads} onSelectLead={handleSelectLead} />
                                                 ) : (
                                                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                                                         <Users className="h-12 w-12 mb-2" /><p>No leads found for this status.</p>
@@ -532,7 +511,7 @@ export default function ToolsPage() {
                                         Choose which dropped leads you want to target. Total selected: <span className="font-bold text-primary">{selectedDroppedLeadIds.length}</span>
                                     </p>
                                     <ScrollArea className="h-96 rounded-md border p-4 mt-2">
-                                        {reengageLoading ? (
+                                        {loading ? (
                                             <div className="space-y-4">
                                                 <Skeleton className="h-6 w-3/4" /><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-1/2" />
                                             </div>
