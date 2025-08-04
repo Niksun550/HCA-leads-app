@@ -14,7 +14,7 @@ import { PropertyType, propertyTypes } from '@/types';
 
 const ReengageLeadInputSchema = z.object({
   customerName: z.string().describe('The name of the customer.'),
-  propertyType: z.enum(propertyTypes).describe('The type of property for the lead (e.g., Residential, Commercial).'),
+  propertyType: z.enum(propertyTypes).describe('The type of property for the lead (e.g., Residential, Commercial, Industries).'),
 });
 export type ReengageLeadInput = z.infer<typeof ReengageLeadInputSchema>;
 

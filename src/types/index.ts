@@ -40,8 +40,8 @@ export const leadSources: LeadSource[] = ['Canopy', 'TPS', 'Own', 'Walk-In', 'Re
 export type MeterType = '1 Phase' | '3 Phase';
 export const meterTypes: MeterType[] = ['1 Phase', '3 Phase'];
 
-export type PropertyType = 'Commercial' | 'Residential';
-export const propertyTypes: PropertyType[] = ['Commercial', 'Residential'];
+export type PropertyType = 'Commercial' | 'Residential' | 'Industries';
+export const propertyTypes: PropertyType[] = ['Commercial', 'Residential', 'Industries'];
 
 export interface Remark {
   text: string;
