@@ -83,12 +83,28 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: values.displayName });
+      
+      const defaultPermissions = {
+        navItems: {
+          dashboard: true,
+          communication: true,
+          utility: true,
+          tasks: true,
+          planner: true,
+          tools: true,
+          board: true,
+          settings: true,
+          admin: false,
+        }
+      };
+      
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         displayName: values.displayName,
         email: values.email,
         role: values.role,
         photoURL: null,
+        permissions: defaultPermissions,
       });
 
       router.push("/dashboard");

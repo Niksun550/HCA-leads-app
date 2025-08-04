@@ -8,7 +8,7 @@ import { getFirebaseServices } from "@/lib/firebase";
 import type { AppUser, RolePermissions } from "@/types";
 
 interface AuthContextType {
-  user: (AppUser & { getIdToken: () => Promise<string | null>; permissions?: RolePermissions; }) | null;
+  user: AppUser | null;
   isLoading: boolean;
   isFirebaseConfigured: boolean;
 }
@@ -53,28 +53,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
-          const getIdToken = () => firebaseUser.getIdToken();
-
           if (userDoc.exists()) {
             const userData = userDoc.data() as AppUser;
             
-            let permissions: RolePermissions | undefined = undefined;
-
+            // Admins get all permissions, everyone else gets what's on their user document
             if (userData.role === 'Admin') {
-                // Admin gets all permissions by default, ignoring the database document
-                permissions = allAdminPermissions;
-            } else if (userData.role) {
-                try {
-                    const permissionDocRef = doc(db, "rolePermissions", userData.role);
-                    const permissionDoc = await getDoc(permissionDocRef);
-                    if(permissionDoc.exists()) {
-                        permissions = permissionDoc.data() as RolePermissions;
-                    } else {
-                        console.warn(`No permission document found for role: ${userData.role}`);
-                    }
-                } catch(permError) {
-                    console.error("Error fetching role permissions:", permError);
-                }
+                userData.permissions = allAdminPermissions;
             }
             
             setUser({
@@ -83,18 +67,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || userData.displayName,
               photoURL: firebaseUser.photoURL || userData.photoURL,
-              getIdToken,
-              permissions,
             });
           } else {
-            console.warn(`No user document found for UID: ${firebaseUser.uid}. Defaulting role.`);
+            console.warn(`No user document found for UID: ${firebaseUser.uid}.`);
              setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
               role: 'Sales Rep', // Fallback role
               photoURL: firebaseUser.photoURL,
-              getIdToken,
             });
           }
         } catch (error) {

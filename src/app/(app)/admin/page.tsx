@@ -7,7 +7,7 @@ import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useAuth } from '@/hooks/use-auth';
-import type { AppUser, UserRole } from '@/types';
+import type { AppUser, UserRole, RolePermissions } from '@/types';
 import { userRoles } from '@/types';
 
 import {
@@ -38,6 +38,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -48,11 +49,33 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoaderCircle, MoreHorizontal, Trash2 } from 'lucide-react';
+import { LoaderCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+
+const allNavItems = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'communication', label: 'Communication' },
+    { id: 'utility', label: 'Utility (Tasks/Planner)' },
+    { id: 'tasks', label: 'Tasks (sub-item)' },
+    { id: 'planner', label: 'Planner (sub-item)' },
+    { id: 'tools', label: 'Tools' },
+    { id: 'board', label: 'Board' },
+    { id: 'settings', label: 'Settings' },
+    { id: 'admin', label: 'Admin' },
+];
 
 const AdminPage = () => {
     const { user, isInitialized } = useAuth();
@@ -63,6 +86,12 @@ const AdminPage = () => {
     const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+    
+    // State for permissions dialog
+    const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+    const [userPermissions, setUserPermissions] = useState<RolePermissions['navItems']>({});
+    const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
 
     useEffect(() => {
@@ -100,7 +129,7 @@ const AdminPage = () => {
             setLoading(false);
         }
     };
-
+    
     const handleRoleChange = async (uid: string, newRole: UserRole) => {
         const { db } = getFirebaseServices();
         if (!db) {
@@ -159,6 +188,51 @@ const AdminPage = () => {
         setIsDeleteAlertOpen(false);
         setUserToDelete(null);
       }
+    };
+    
+    const openPermissionDialog = (userToEdit: AppUser) => {
+        setEditingUser(userToEdit);
+        const defaultPermissions = allNavItems.reduce((acc, item) => ({...acc, [item.id]: true}), {});
+        const currentPermissions = userToEdit.permissions?.navItems || defaultPermissions;
+        setUserPermissions(currentPermissions);
+        setIsPermissionDialogOpen(true);
+    };
+
+    const handlePermissionChange = (itemId: string, checked: boolean) => {
+        setUserPermissions(prev => ({ ...prev, [itemId]: checked }));
+    };
+
+    const handleSavePermissions = async () => {
+        if (!editingUser) return;
+        
+        setIsSavingPermissions(true);
+        const { db } = getFirebaseServices();
+        if (!db) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not configured.' });
+            setIsSavingPermissions(false);
+            return;
+        }
+
+        try {
+            const userDocRef = doc(db, 'users', editingUser.uid);
+            await updateDoc(userDocRef, {
+                'permissions.navItems': userPermissions,
+            });
+            
+            setUsers(prevUsers =>
+                prevUsers.map(u => u.uid === editingUser.uid ? { ...u, permissions: { navItems: userPermissions } } : u)
+            );
+            toast({
+                title: 'Permissions Updated',
+                description: `Permissions for ${editingUser.displayName} have been saved.`,
+            });
+            setIsPermissionDialogOpen(false);
+            setEditingUser(null);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
+        } finally {
+            setIsSavingPermissions(false);
+        }
     };
     
     if (!isInitialized || loading || !user) {
@@ -224,6 +298,10 @@ const AdminPage = () => {
                                         </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => openPermissionDialog(u)} disabled={user?.uid === u.uid}>
+                                                <Edit className="mr-2 h-4 w-4" /> Edit Permissions
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem 
                                                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
                                                 onClick={() => openDeleteConfirmation(u)}
@@ -264,6 +342,38 @@ const AdminPage = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            
+            <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Permissions for {editingUser?.displayName}</DialogTitle>
+                        <DialogDescription>
+                            Select the navigation tabs this user should have access to.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        {allNavItems.map(item => (
+                            <div key={item.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`perm-${item.id}`}
+                                    checked={userPermissions[item.id as keyof typeof userPermissions] || false}
+                                    onCheckedChange={(checked) => handlePermissionChange(item.id, !!checked)}
+                                />
+                                <Label htmlFor={`perm-${item.id}`} className="text-sm font-normal">
+                                    {item.label}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsPermissionDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSavePermissions} disabled={isSavingPermissions}>
+                           {isSavingPermissions && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                           Save Permissions
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

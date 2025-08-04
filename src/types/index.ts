@@ -4,14 +4,6 @@ import type { Timestamp } from 'firebase/firestore';
 export type UserRole = 'Admin' | 'Sales Rep' | 'Viewer' | 'Structure' | 'Director';
 export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer', 'Structure', 'Director'];
 
-export interface AppUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  role: UserRole;
-  photoURL?: string | null;
-}
-
 export interface RolePermissions {
     navItems: {
         dashboard?: boolean;
@@ -25,6 +17,16 @@ export interface RolePermissions {
         admin?: boolean;
     }
 }
+
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role: UserRole;
+  photoURL?: string | null;
+  permissions?: RolePermissions;
+}
+
 
 export type LeadStatus = 'New' | 'Contacted' | 'Visited' | 'Proposal Sent' | 'Structure Pending' | 'Site Visit Done' | 'IN Design' | 'Quotation Send' | 'Closed' | 'Dropped';
 export const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Visited', 'Proposal Sent', 'Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send', 'Closed', 'Dropped'];
