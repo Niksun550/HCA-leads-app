@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, onSnapshot, query, where, or } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
@@ -86,32 +86,76 @@ export default function DashboardPage() {
     });
     
     let leadsQuery;
+    let unsubscribeLeads: () => void;
+
     if (user.role === 'Admin' || user.role === 'Viewer' || user.role === 'Director') {
         leadsQuery = query(collection(db, 'leads'));
+        unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+          const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+          setLeads(leadsData);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching leads:", error);
+          setLoading(false);
+        });
     } else if (user.role === 'Sales Rep') {
         leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+        unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+          const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+          setLeads(leadsData);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching leads:", error);
+          setLoading(false);
+        });
     } else if (user.role === 'Structure') {
-        leadsQuery = query(collection(db, 'leads'), or(
-            where('structureTeamMemberId', '==', user.uid),
-            where('status', 'in', structureLeadStatuses)
-        ));
-    } else {
-        // This is a fallback query that should not return any results
-        leadsQuery = query(collection(db, 'leads'), where('ownerId', '==', 'invalid-user-id'));
-    }
+        const fetchStructureLeads = async () => {
+            try {
+                const assignedQuery = query(collection(db, 'leads'), where('structureTeamMemberId', '==', user.uid));
+                const statusQuery = query(collection(db, 'leads'), where('status', 'in', structureLeadStatuses));
+                
+                const [assignedSnapshot, statusSnapshot] = await Promise.all([
+                    getDocs(assignedQuery),
+                    getDocs(statusQuery)
+                ]);
 
-    const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
-      const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
-      setLeads(leadsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching leads:", error);
-      setLoading(false);
-    });
+                const leadsMap = new Map<string, Lead>();
+                
+                assignedSnapshot.docs.forEach(doc => {
+                    const lead = { id: doc.id, ...doc.data() } as Lead;
+                    leadsMap.set(lead.id, lead);
+                });
+
+                statusSnapshot.docs.forEach(doc => {
+                    const lead = { id: doc.id, ...doc.data() } as Lead;
+                    leadsMap.set(lead.id, lead);
+                });
+                
+                setLeads(Array.from(leadsMap.values()));
+            } catch (error) {
+                 console.error("Error fetching structure leads:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStructureLeads();
+        // For structure role, we fetch once as onSnapshot would be complex to manage for two queries.
+        // A more robust real-time solution might involve Cloud Functions or a different data model.
+        unsubscribeLeads = () => {}; 
+
+    } else {
+        // This is a fallback query that should not return any results for other roles
+        setLeads([]);
+        setLoading(false);
+        unsubscribeLeads = () => {};
+    }
 
     return () => {
         unsubscribeUsers();
-        unsubscribeLeads();
+        if (unsubscribeLeads) {
+            unsubscribeLeads();
+        }
     };
 
   }, [user, isInitialized]);
