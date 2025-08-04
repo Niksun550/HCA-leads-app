@@ -2,47 +2,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isUserAuthenticated() {
-      return request.auth != null;
-    }
 
     function isUserRole(role) {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
+    
+    function isUserOneOfRoles(roles) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
 
     match /users/{userId} {
-      // Allow any authenticated user to create their own user document
-      allow create: if isUserAuthenticated();
-      
-      // Allow users to read their own document, and Admins to read any document
-      allow read: if request.auth.uid == userId || isUserRole('Admin');
-      
-      // Allow users to update their own document
-      allow update: if request.auth.uid == userId;
-      
-      // Only Admins can delete users
-      allow delete: if isUserRole('Admin');
-      
-      // Admins can list all users
-      allow list: if isUserRole('Admin');
+      allow list: if isUserOneOfRoles(['Admin', 'Director']);
+      allow get: if isUserOneOfRoles(['Admin', 'Director', 'Sales Rep', 'Structure', 'Viewer']);
+      allow read: if request.auth.uid == userId || isUserOneOfRoles(['Admin', 'Director']);
+      allow write: if request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
     match /leads/{leadId} {
-      allow read, list: if isUserAuthenticated();
-      allow write: if isUserAuthenticated();
+      allow read: if isUserOneOfRoles(['Admin', 'Viewer', 'Director'])
+                   || request.auth.uid == resource.data.ownerId
+                   || request.auth.uid == resource.data.structureTeamMemberId
+                   || (isUserOneOfRoles(['Structure']) && resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send']);
+                   
+      allow list: if isUserOneOfRoles(['Admin', 'Viewer', 'Director', 'Structure'])
+                   || (isUserRole('Sales Rep'));
+
+      allow write: if isUserOneOfRoles(['Admin', 'Director', 'Sales Rep'])
+                    || request.auth.uid == resource.data.structureTeamMemberId;
     }
-    
+
     match /tasks/{taskId} {
-      allow read, write: if isUserAuthenticated();
+      allow read: if isUserOneOfRoles(['Admin', 'Director', 'Viewer'])
+                   || request.auth.uid == resource.data.assigneeId
+                   || request.auth.uid == resource.data.createdBy;
+
+      allow write: if request.auth.uid == resource.data.assigneeId
+                     || request.auth.uid == resource.data.createdBy;
     }
     
     match /conversations/{conversationId} {
-      allow read, write: if isUserAuthenticated() && request.auth.uid in resource.data.participants;
-      
-      match /messages/{messageId} {
-        allow read, create: if isUserAuthenticated() && get(parent).data.participants.hasAny([request.auth.uid]);
-      }
+       allow read, write: if request.auth.uid in resource.data.participants;
+       
+       match /messages/{messageId} {
+         allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+       }
     }
   }
 }
