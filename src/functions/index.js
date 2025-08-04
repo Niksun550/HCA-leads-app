@@ -59,8 +59,7 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
     const db = admin.firestore();
 
     try {
-        const participants = [currentUserId, otherUserId];
-        const sortedParticipants = [...participants].sort();
+        const sortedParticipants = [currentUserId, otherUserId].sort();
         const conversationId = sortedParticipants.join('_');
         const conversationRef = db.collection('conversations').doc(conversationId);
         
@@ -79,8 +78,8 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('not-found', 'One or more users not found.');
         }
 
-        const currentUserData = currentUserDoc.data() || {};
-        const otherUserData = otherUserDoc.data() || {};
+        const currentUserData = currentUserDoc.data();
+        const otherUserData = otherUserDoc.data();
         
         const newConversation = {
             id: conversationId,
