@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList } from "lucide-react";
+import { LogOut, Sun, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList, MessageCircle } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,7 +71,10 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
               </NavLink>
-
+              <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
+                <MessageCircle className="h-5 w-5" />
+                Communication
+              </NavLink>
               <Collapsible open={isUtilityOpen} onOpenChange={setIsUtilityOpen}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>div>svg]:rotate-180">
                      <div className="flex items-center gap-3">
@@ -180,6 +183,7 @@ const MobileBottomNav = () => {
 
     const navItems = [
         { href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
+        { href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Chat" },
         { href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
     ];
     
