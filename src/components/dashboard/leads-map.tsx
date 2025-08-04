@@ -1,10 +1,13 @@
-
 "use client";
 
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Lead } from "@/types";
 import { useMemo } from "react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+
 
 interface LeadsMapProps {
   leads: Lead[];
@@ -34,16 +37,23 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
 
   if (!apiKey) {
     return (
-      <Card className="shadow-sm h-full flex flex-col items-center justify-center">
+      <Card className="shadow-sm h-full flex flex-col">
         <CardHeader>
           <CardTitle>Lead Locations</CardTitle>
+          <CardDescription>A map of all leads with location data.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center p-4">
-            Google Maps API key is not configured.
-            <br />
-            Please create a `.env.local` file and add your key as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
-          </p>
+        <CardContent className="flex-grow flex items-center justify-center">
+          <Alert variant="destructive" className="w-full">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Configuration Error</AlertTitle>
+              <AlertDescription>
+                Google Maps API key is not configured. Please add your key to a 
+                 <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file to display the map.
+                 <Link href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" className="block text-xs underline mt-2">
+                    Get your API Key from Google Cloud Console
+                 </Link>
+              </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );
@@ -53,8 +63,9 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
     <Card className="shadow-sm h-full">
       <CardHeader>
         <CardTitle>Lead Locations</CardTitle>
+        <CardDescription>A map of all leads with location data.</CardDescription>
       </CardHeader>
-      <CardContent className="h-[300px] w-full p-0">
+      <CardContent className="h-[300px] w-full p-0 rounded-b-lg overflow-hidden">
         <APIProvider apiKey={apiKey}>
           <Map
             defaultCenter={center}

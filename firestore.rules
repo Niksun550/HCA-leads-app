@@ -2,47 +2,47 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
     function isUserOneOfRoles(roles) {
       return request.auth.token.role in roles;
     }
 
     match /users/{userId} {
-      // Allow list for roles that need to populate user dropdowns or lists.
-      allow list: if isUserOneOfRoles(['Admin', 'Sales Rep', 'Director']);
-      // Allow read only for the user themselves or for an Admin.
-      allow read: if request.auth.uid == userId || isUserOneOfRoles(['Admin']);
-      // Allow write only for the user themselves.
+      allow list: if isUserOneOfRoles(['Admin', 'Director', 'Viewer', 'Sales Rep']);
+      allow read: if request.auth.uid == userId || isUserOneOfRoles(['Admin', 'Director', 'Viewer']);
       allow write: if request.auth.uid == userId;
     }
 
     match /leads/{leadId} {
-      // Allow list for anyone who can see the dashboard.
       allow list: if isUserOneOfRoles(['Admin', 'Viewer', 'Director', 'Sales Rep', 'Structure']);
-      // Allow read/write for lead owner, structure team member, or high-level roles.
-      allow read, write: if request.auth.uid == resource.data.ownerId 
-                      || request.auth.uid == resource.data.structureTeamMemberId
-                      || isUserOneOfRoles(['Admin', 'Viewer', 'Director']);
+      allow read: if request.auth.uid == resource.data.ownerId || 
+                     request.auth.uid == resource.data.structureTeamMemberId || 
+                     isUserOneOfRoles(['Admin', 'Viewer', 'Director']) ||
+                     (isUserOneOfRoles(['Structure']) && resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send']);
+      allow write: if request.auth.uid == resource.data.ownerId || 
+                      request.auth.uid == resource.data.structureTeamMemberId ||
+                      isUserOneOfRoles(['Admin', 'Director']);
+      allow create: if request.auth != null;
+      allow delete: if isUserOneOfRoles(['Admin']);
     }
     
     match /tasks/{taskId} {
-      // Allow list for anyone who might see tasks.
-      allow list: if isUserOneOfRoles(['Admin', 'Viewer', 'Director', 'Sales Rep', 'Structure']);
-      // Allow read/write only for assignee or creator.
-      allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
+      allow read: if request.auth.uid == resource.data.assigneeId || 
+                     request.auth.uid == resource.data.createdBy ||
+                     isUserOneOfRoles(['Admin', 'Director', 'Viewer']);
+      allow write: if request.auth.uid == resource.data.assigneeId || 
+                      request.auth.uid == resource.data.createdBy ||
+                      isUserOneOfRoles(['Admin']);
+      allow create: if request.auth != null;
+      allow delete: if request.auth.uid == resource.data.createdBy || isUserOneOfRoles(['Admin']);
     }
-
+    
     match /conversations/{conversationId} {
-      allow read, write, create: if request.auth.uid in resource.data.participants;
-
+      allow read, write: if request.auth.uid in resource.data.participants;
+      
       match /messages/{messageId} {
         allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
       }
-    }
-
-    match /audit_logs/{logId} {
-      allow create: if request.auth != null;
-      allow read: if isUserOneOfRoles(['Admin']);
     }
   }
 }
