@@ -110,20 +110,38 @@ export default function CommunicationPage() {
     try {
         const functions = getFunctions();
         const createConversation = httpsCallable(functions, 'createConversation');
-        const result = await createConversation({ otherUserId: selectedUser.uid });
+        const result: any = await createConversation({ otherUserId: selectedUser.uid });
         
         const { conversationId } = result.data as { conversationId: string };
 
         // The onSnapshot listener will pick up the new/existing conversation.
         // We find it in our state and select it.
+        // We add a listener to conversations state to select it once it's available
+        const selectNewConversation = (convs: Conversation[]) => {
+            const conversationToSelect = convs.find(c => c.id === conversationId);
+            if (conversationToSelect) {
+                handleSelectConversation(conversationToSelect);
+            }
+        };
+
+        // We check if it is already in the list.
         const existingConv = conversations.find(c => c.id === conversationId);
         if (existingConv) {
           setSelectedConversation(existingConv);
         } else {
-            // If it's not in the state yet, we might need to wait for the listener
-            // A better approach is to just let the user click from the list which will now be updated.
-            // For now, we will just select it if found.
-            // This might need a more robust solution if there's a significant delay.
+            // If not, we cannot be sure when the onSnapshot listener will fire,
+            // so we will manually check every 100ms for a short period.
+            let attempts = 0;
+            const interval = setInterval(() => {
+                const conv = conversationsRef.current.find(c => c.id === conversationId);
+                if (conv || attempts > 20) { // check for 2 seconds
+                    if(conv) {
+                        setSelectedConversation(conv);
+                    }
+                    clearInterval(interval);
+                }
+                attempts++;
+            }, 100);
         }
 
     } catch(error) {

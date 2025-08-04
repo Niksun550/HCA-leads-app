@@ -61,14 +61,14 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
     try {
         const sortedParticipants = [currentUserId, otherUserId].sort();
         const conversationId = sortedParticipants.join('_');
-        const conversationRef = doc(db, 'conversations', conversationId);
+        const conversationRef = db.collection('conversations').doc(conversationId);
         
         const docSnap = await conversationRef.get();
         
         if (docSnap.exists()) {
-             const existingConversation = docSnap.data();
-             // Manually add the id to the returned object
-             return { conversation: { id: docSnap.id, ...existingConversation } };
+             // If conversation already exists, just return its ID.
+             // The client-side onSnapshot will handle displaying it.
+             return { conversationId: docSnap.id };
         }
 
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
@@ -101,11 +101,7 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
 
         await conversationRef.set(newConversation);
 
-        // After setting, we need to fetch the doc again to get the server timestamp
-        const newDocSnap = await conversationRef.get();
-        const finalConversation = newDocSnap.data();
-
-        return { conversation: { id: conversationId, ...finalConversation } };
+        return { conversationId: conversationId };
 
     } catch (error) {
         console.error("Error creating conversation:", error);
