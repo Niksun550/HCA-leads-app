@@ -114,15 +114,6 @@ export default function CommunicationPage() {
         
         const { conversationId } = result.data as { conversationId: string };
 
-        // The onSnapshot listener will pick up the new/existing conversation.
-        // We find it in our state and select it.
-        const selectNewConversation = () => {
-            const conversationToSelect = conversationsRef.current.find(c => c.id === conversationId);
-            if (conversationToSelect) {
-                handleSelectConversation(conversationToSelect);
-            }
-        };
-
         // We check if it is already in the list.
         const existingConv = conversationsRef.current.find(c => c.id === conversationId);
         if (existingConv) {
