@@ -13,7 +13,6 @@ exports.deleteUser = functions.https.onCall(async (data, context) => {
     );
   }
 
-  // Check if the user is an admin by reading their document from Firestore.
   const adminUserDoc = await admin.firestore().collection('users').doc(context.auth.uid).get();
   if (!adminUserDoc.exists || adminUserDoc.data().role !== 'Admin') {
      throw new functions.https.HttpsError(
@@ -31,12 +30,8 @@ exports.deleteUser = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    // Delete the user from Firebase Authentication.
     await admin.auth().deleteUser(uid);
-
-    // Delete the user's document from Firestore.
     await admin.firestore().collection('users').doc(uid).delete();
-
     return { result: `Successfully deleted user ${uid}` };
   } catch (error) {
     console.error("Error deleting user:", error);
@@ -83,11 +78,9 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         const docSnap = await conversationRef.get();
         
         if (docSnap.exists()) {
-             // If conversation already exists, just return its ID.
              return { conversationId: docSnap.id };
         }
 
-        // If it doesn't exist, create it.
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
         const otherUserDoc = await db.collection('users').doc(otherUserId).get();
 
