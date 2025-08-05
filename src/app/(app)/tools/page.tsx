@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { collection, onSnapshot, query, where, Query } from 'firebase/firestore';
+import { collection, onSnapshot, query, Query } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Lead, LeadStatus, PropertyType } from "@/types";
@@ -51,7 +51,7 @@ interface GeneratedImageContent {
 }
 
 type CampaignType = "ai_message" | "ai_image" | "custom_message";
-
+type MainTabs = "marketing" | "reengage";
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -86,6 +86,7 @@ export default function ToolsPage() {
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [activeTab, setActiveTab] = useState<MainTabs>("marketing");
     
     // Marketing Campaign State
     const [message, setMessage] = useState("");
@@ -143,13 +144,15 @@ export default function ToolsPage() {
 
     
     const marketingDbLeads = useMemo(() => {
+        if (activeTab !== 'marketing') return [];
         if (statusFilter === 'All') return allDbLeads;
         return allDbLeads.filter(lead => lead.status === statusFilter);
-    }, [allDbLeads, statusFilter]);
+    }, [allDbLeads, statusFilter, activeTab]);
     
     const droppedLeads = useMemo(() => {
+        if (activeTab !== 'reengage') return [];
         return allDbLeads.filter(lead => lead.status === 'Dropped');
-    }, [allDbLeads]);
+    }, [allDbLeads, activeTab]);
     
     
     const handleSelectLead = (leadId: string, checked: boolean) => {
@@ -347,7 +350,7 @@ export default function ToolsPage() {
                 <p className="text-muted-foreground">Advanced features to boost your productivity.</p>
             </header>
 
-            <Tabs defaultValue="marketing" className="w-full">
+            <Tabs defaultValue="marketing" onValueChange={(value) => setActiveTab(value as MainTabs)} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="marketing">Marketing Campaigns</TabsTrigger>
                     <TabsTrigger value="reengage">Re-engage Leads</TabsTrigger>
