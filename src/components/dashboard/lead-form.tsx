@@ -90,6 +90,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const leadIdRef = useRef<string>(lead?.id || uuidv4());
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -132,6 +133,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
 
   useEffect(() => {
     if (lead) {
+      leadIdRef.current = lead.id;
       form.reset({
         ...lead,
         kwRequirement: lead.kwRequirement || 0,
@@ -143,6 +145,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       });
       setAttachments(lead.attachments || []);
     } else {
+      leadIdRef.current = uuidv4();
       form.reset({
         customerName: "",
         mobileNumber: "",
@@ -199,7 +202,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
 
     setUploadProgress(0);
     const fileId = uuidv4();
-    const filePath = `attachments/${lead?.id || 'new'}/${fileId}-${file.name}`;
+    const filePath = `attachments/${leadIdRef.current}/${fileId}-${file.name}`;
     const fileRef = storageRef(storage, filePath);
 
     const uploadTask = uploadBytesResumable(fileRef, file);
@@ -260,7 +263,9 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         remarks.push(newRemark);
       }
       
-      const data: Omit<Lead, 'id'> = {
+      const leadId = leadIdRef.current;
+
+      const data: Omit<Lead, 'id'> & { id?: string } = {
         customerName: values.customerName,
         mobileNumber: values.mobileNumber,
         address: values.address,
@@ -293,13 +298,15 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       } else if (values.status !== 'Closed') {
         data.closedAt = null;
       }
+      
+      const docRef = doc(db, "leads", leadId);
 
       if (lead) {
-        await setDoc(doc(db, "leads", lead.id), data, { merge: true });
+        await setDoc(docRef, data, { merge: true });
         toast({ title: "Lead updated successfully!" });
       } else {
-        const newLeadRef = doc(collection(db, "leads"));
-        await setDoc(newLeadRef, { ...data, id: newLeadRef.id });
+        data.id = leadId;
+        await setDoc(docRef, data);
         toast({ title: "Lead added successfully!" });
       }
       setIsOpen(false);
@@ -344,11 +351,15 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
   };
   
   const handleGenerateImage = async () => {
-    if (!lead) return;
+    const propertyType = form.getValues("propertyType");
+    if (!propertyType) {
+        toast({ variant: 'destructive', title: 'Cannot generate image', description: 'Please select a property type first.'});
+        return;
+    }
     setIsGeneratingImage(true);
     setGeneratedImage(null);
     try {
-        const result = await generateMarketingImage({ propertyType: lead.propertyType });
+        const result = await generateMarketingImage({ propertyType: propertyType });
         if (result.imageUrl) {
             setGeneratedImage(result.imageUrl);
             toast({ title: "Image generated successfully!" });
@@ -390,7 +401,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="details">Details</TabsTrigger>
                         <TabsTrigger value="attachments">Attachments</TabsTrigger>
-                        <TabsTrigger value="marketing" disabled={!lead || !canGenerateImage}>Marketing</TabsTrigger>
+                        <TabsTrigger value="marketing" disabled={!canGenerateImage}>Marketing</TabsTrigger>
                     </TabsList>
                     <TabsContent value="details">
                         <Form {...form}>
@@ -523,7 +534,6 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                                         <Button
                                         type="button"
                                         variant="outline"
-                                        disabled={isStructureForm}
                                         className={cn(
                                             "justify-start text-left font-normal",
                                             !field.value?.length && "text-muted-foreground"
@@ -644,7 +654,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                                         variant="outline"
                                         size="sm"
                                     >
-                                        <a href={generatedImage} download={`solar-concept-${lead?.customerName.replace(/\s+/g, '-')}.png`}>
+                                        <a href={generatedImage} download={`solar-concept-${form.getValues('customerName').replace(/\s+/g, '-')}.png`}>
                                             <Download className="mr-2" /> Download Image
                                         </a>
                                     </Button>
@@ -693,3 +703,5 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
     </>
   );
 }
+
+    
