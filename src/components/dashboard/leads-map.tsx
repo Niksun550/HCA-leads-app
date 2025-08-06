@@ -73,7 +73,7 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
             defaultZoom={5}
             gestureHandling={"greedy"}
             disableDefaultUI={true}
-            mapId="solar_leads_map"
+            mapId="hca_solar_crm_map"
           >
             {markers.map((lead) => (
                 lead.location &&

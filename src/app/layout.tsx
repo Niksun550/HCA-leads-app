@@ -12,7 +12,7 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: 'SolarLeads',
+  title: 'HCASolar CRM',
   description: 'A lead management tool for solar energy sales teams.',
 };
 

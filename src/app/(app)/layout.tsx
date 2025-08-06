@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { LogOut, Sun, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList, MessageCircle } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarDays, LayoutGrid, Wrench, MoreHorizontal, SunMoon, ChevronDown, ClipboardList, MessageCircle } from "lucide-react";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HcaLogo } from "@/components/icons/hca-logo";
 
 const NavLink = ({ href, children, isActive, onClick }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void }) => (
   <Link
@@ -64,8 +65,8 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
         <>
             <div className="flex h-16 shrink-0 items-center border-b px-6">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                <Sun className="h-6 w-6 text-primary" />
-                <span className="font-headline text-lg">SolarLeads</span>
+                <HcaLogo className="h-8 w-8 text-primary" />
+                <span className="font-headline text-lg">HCASolar CRM</span>
               </Link>
             </div>
             <nav className="flex-1 flex flex-col gap-2 p-4">
@@ -277,8 +278,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <Sun className="h-6 w-6 text-primary" />
-            <span className="font-headline text-lg">SolarLeads</span>
+            <HcaLogo className="h-8 w-8 text-primary" />
+            <span className="font-headline text-lg">HCASolar CRM</span>
           </Link>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-8 pb-20 sm:pb-8">
