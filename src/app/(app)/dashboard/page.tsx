@@ -7,7 +7,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { Lead, LeadStatus, AppUser } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles, User as UserIcon } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles, User as UserIcon, TrendingUp } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
@@ -32,6 +32,7 @@ import { leadStatuses, structureLeadStatuses } from '@/types';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ClientLeadsChart = dynamic(() => import('@/components/dashboard/client-leads-chart'), {
   ssr: false,
@@ -212,6 +213,8 @@ export default function DashboardPage() {
     );
   }
 
+  const isDirectorOrAdmin = user.role === 'Director' || user.role === 'Admin';
+
   return (
     <div className="py-4 space-y-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -220,7 +223,7 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Welcome back, {user.displayName}!</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-           {(user.role === 'Director' || user.role === 'Admin') && (
+           {isDirectorOrAdmin && (
              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <UserIcon className="mr-2 h-4 w-4" />
@@ -268,23 +271,32 @@ export default function DashboardPage() {
         </div>
       </header>
       
-      {user.role === 'Director' || user.role === 'Admin' ? (
-         <>
-          <StatCards leads={filteredLeads} />
-
-          <div className="grid gap-8 md:grid-cols-5">
-            <div className="md:col-span-3">
-              <ClientLeadsChart leads={filteredLeads} key={filteredLeads.map(l => l.id).join(',') + selectedUserId} />
-            </div>
-            <div className="md:col-span-2">
-              <LeadsMap leads={filteredLeads} />
-            </div>
-          </div>
-          
-          <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
-        </>
+      {isDirectorOrAdmin ? (
+         <Tabs defaultValue="overview" className="w-full">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="forecasting"><TrendingUp className="mr-2"/>Forecasting</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-6">
+                <div className="space-y-8">
+                    <StatCards leads={filteredLeads} />
+                    <div className="grid gap-8 md:grid-cols-5">
+                      <div className="md:col-span-3">
+                        <ClientLeadsChart leads={filteredLeads} key={filteredLeads.map(l => l.id).join(',') + selectedUserId} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <LeadsMap leads={filteredLeads} />
+                      </div>
+                    </div>
+                    <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
+                </div>
+            </TabsContent>
+            <TabsContent value="forecasting" className="mt-6">
+                <ForecastingDashboard leads={leads} />
+            </TabsContent>
+          </Tabs>
       ) : (
-        <>
+        <div className="space-y-8">
           <StatCards leads={filteredLeads} />
 
           <div className="grid gap-8 md:grid-cols-5">
@@ -297,7 +309,7 @@ export default function DashboardPage() {
           </div>
           
           <LeadsTable leads={filteredLeads} onEdit={handleEditLead} />
-        </>
+        </div>
       )}
 
       <LeadForm
