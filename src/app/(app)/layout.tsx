@@ -23,6 +23,8 @@ import { LogOut, Settings, LayoutDashboard, Menu, Shield, CheckSquare, CalendarD
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HcaLogo } from "@/components/icons/hca-logo";
+import { doc, onSnapshot } from "firebase/firestore";
+import Image from 'next/image';
 
 const NavLink = ({ href, children, isActive, onClick }: { href: string; children: React.ReactNode; isActive: boolean, onClick?: () => void }) => (
   <Link
@@ -39,7 +41,7 @@ const NavLink = ({ href, children, isActive, onClick }: { href: string; children
   </Link>
 );
 
-const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
+const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, logoUrl?: string | null }) => {
     const pathname = usePathname();
     const { user } = useAuth();
     const router = useRouter();
@@ -65,7 +67,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
         <>
             <div className="flex h-16 shrink-0 items-center border-b px-6">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                <HcaLogo className="h-8 w-8 text-primary" />
+                {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" /> : <HcaLogo className="h-8 w-8 text-primary" />}
                 <span className="font-headline text-lg">HCASolar CRM</span>
               </Link>
             </div>
@@ -255,12 +257,29 @@ const MobileBottomNav = () => {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
     }
   }, [isLoading, user, router]);
+
+  useEffect(() => {
+    const { db } = getFirebaseServices();
+    if (!db) return;
+
+    const settingsRef = doc(db, 'settings', 'branding');
+    const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setLogoUrl(docSnap.data().logoUrl);
+        } else {
+            setLogoUrl(null);
+        }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (isLoading || !user) {
       return (
@@ -273,12 +292,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen w-full">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background sm:flex">
-        <SidebarContent />
+        <SidebarContent logoUrl={logoUrl}/>
       </aside>
       <div className="flex flex-col sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <HcaLogo className="h-8 w-8 text-primary" />
+            {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain"/> : <HcaLogo className="h-8 w-8 text-primary" />}
             <span className="font-headline text-lg">HCASolar CRM</span>
           </Link>
         </header>

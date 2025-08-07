@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useAuth } from '@/hooks/use-auth';
 import type { AppUser, UserRole, RolePermissions } from '@/types';
 import { userRoles } from '@/types';
@@ -60,10 +61,13 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoaderCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { LoaderCircle, MoreHorizontal, Trash2, Edit, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import Image from "next/image";
 
 const allNavItems = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -92,6 +96,12 @@ const AdminPage = () => {
     const [editingUser, setEditingUser] = useState<AppUser | null>(null);
     const [userPermissions, setUserPermissions] = useState<RolePermissions['navItems']>({});
     const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+    
+    // State for logo upload
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -234,6 +244,56 @@ const AdminPage = () => {
             setIsSavingPermissions(false);
         }
     };
+
+    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleUploadLogo = async () => {
+        if (!logoFile) {
+            toast({ variant: 'destructive', title: 'No file selected', description: 'Please choose a logo file to upload.' });
+            return;
+        }
+
+        setIsUploadingLogo(true);
+        setUploadProgress(0);
+        const { storage, db } = getFirebaseServices();
+        if (!storage || !db) return;
+
+        const logoPath = `branding/logo`;
+        const fileRef = storageRef(storage, logoPath);
+        const uploadTask = uploadBytesResumable(fileRef, logoFile);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+            },
+            (error) => {
+                console.error("Upload failed", error);
+                toast({ variant: "destructive", title: "Upload Failed", description: error.message });
+                setIsUploadingLogo(false);
+                setUploadProgress(null);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                try {
+                    const settingsRef = doc(db, 'settings', 'branding');
+                    await setDoc(settingsRef, { logoUrl: downloadURL }, { merge: true });
+                    toast({ title: "Logo updated successfully!", description: "The new logo will be visible to all users on next refresh." });
+                } catch (error: any) {
+                     toast({ variant: "destructive", title: "Save Failed", description: "Could not save the new logo URL to the database." });
+                } finally {
+                    setIsUploadingLogo(false);
+                    setUploadProgress(null);
+                }
+            }
+        );
+    };
     
     if (!isInitialized || loading || !user) {
         return (
@@ -249,76 +309,109 @@ const AdminPage = () => {
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Panel</h1>
                 <p className="text-muted-foreground">Manage application settings and users.</p>
             </header>
-            <Card>
-                <CardHeader>
-                    <CardTitle>User Management</CardTitle>
-                    <CardDescription>Manage roles and permissions for all users in the system.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-lg border shadow-sm bg-card">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead className="w-[200px]">Role</TableHead>
-                             <TableHead className="text-right w-[100px]">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.map((u) => (
-                            <TableRow key={u.uid}>
-                                <TableCell>
-                                <div className="font-medium">{u.displayName}</div>
-                                <div className="text-sm text-muted-foreground">{u.email}</div>
-                                </TableCell>
-                                <TableCell>
-                                <Select
-                                    value={u.role}
-                                    onValueChange={(newRole: UserRole) => handleRoleChange(u.uid, newRole)}
-                                    disabled={user?.uid === u.uid} // Admin cannot change their own role
-                                >
-                                    <SelectTrigger>
-                                    <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {userRoles.map((role) => (
-                                        <SelectItem key={role} value={role}>
-                                        {role}
-                                        </SelectItem>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>User Management</CardTitle>
+                            <CardDescription>Manage roles and permissions for all users in the system.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-lg border shadow-sm bg-card">
+                                <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>User</TableHead>
+                                    <TableHead className="w-[200px]">Role</TableHead>
+                                    <TableHead className="text-right w-[100px]">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {users.map((u) => (
+                                    <TableRow key={u.uid}>
+                                        <TableCell>
+                                        <div className="font-medium">{u.displayName}</div>
+                                        <div className="text-sm text-muted-foreground">{u.email}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                        <Select
+                                            value={u.role}
+                                            onValueChange={(newRole: UserRole) => handleRoleChange(u.uid, newRole)}
+                                            disabled={user?.uid === u.uid} // Admin cannot change their own role
+                                        >
+                                            <SelectTrigger>
+                                            <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                            {userRoles.map((role) => (
+                                                <SelectItem key={role} value={role}>
+                                                {role}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={user?.uid === u.uid}>
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => openPermissionDialog(u)} disabled={user?.uid === u.uid}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit Permissions
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                        onClick={() => openDeleteConfirmation(u)}
+                                                        disabled={user?.uid === u.uid}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
                                     ))}
-                                    </SelectContent>
-                                </Select>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={user?.uid === u.uid}>
-                                            <span className="sr-only">Open menu</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => openPermissionDialog(u)} disabled={user?.uid === u.uid}>
-                                                <Edit className="mr-2 h-4 w-4" /> Edit Permissions
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem 
-                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                onClick={() => openDeleteConfirmation(u)}
-                                                disabled={user?.uid === u.uid}
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                                </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Branding</CardTitle>
+                            <CardDescription>Customize the look of the application.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label htmlFor="logo-upload">Application Logo</Label>
+                                <Input id="logo-upload" type="file" accept="image/png, image/jpeg, image/svg+xml, image/webp" onChange={handleLogoFileChange} />
+                                <p className="text-xs text-muted-foreground mt-1">Recommended size: 128x128px</p>
+                            </div>
+
+                            {logoPreview && (
+                                <div className="p-4 border border-dashed rounded-md flex items-center justify-center">
+                                    <Image src={logoPreview} alt="Logo Preview" width={100} height={100} className="object-contain"/>
+                                </div>
+                            )}
+
+                            {uploadProgress !== null && <Progress value={uploadProgress} />}
+
+                            <Button onClick={handleUploadLogo} disabled={!logoFile || isUploadingLogo}>
+                                {isUploadingLogo ? <LoaderCircle className="mr-2 animate-spin" /> : <UploadCloud className="mr-2"/>}
+                                Upload Logo
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
 
             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                 <AlertDialogContent>
