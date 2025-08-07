@@ -13,7 +13,7 @@ import { TasksTable } from "@/components/tasks/tasks-table";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TasksPage() {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
@@ -23,8 +23,8 @@ export default function TasksPage() {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     useEffect(() => {
-        if (!isInitialized || !user) {
-            if (isInitialized) setLoading(false);
+        if (isAuthLoading || !user) {
+            if (!isAuthLoading) setLoading(false);
             return;
         }
 
@@ -67,7 +67,7 @@ export default function TasksPage() {
             unsubscribeLeads();
             unsubscribeTasks();
         };
-    }, [user, isInitialized, toast]);
+    }, [user, isAuthLoading, toast]);
 
     const handleAddTask = () => {
         setSelectedTask(null);
@@ -93,7 +93,7 @@ export default function TasksPage() {
         }
     };
 
-    if (!isInitialized || loading || !user) {
+    if (isAuthLoading || loading || !user) {
         return (
             <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
                 <LoaderCircle className="h-12 w-12 animate-spin text-primary" />

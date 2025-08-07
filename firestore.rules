@@ -1,66 +1,64 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuth() {
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
-
+    
+    // Helper function to check if the user is an Admin
     function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-    }
-    
-    function isDirector() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Director';
-    }
-    
-    function isViewer() {
-        return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Viewer';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    function isOwner(resourceId) {
-      return request.auth.uid == resourceId;
-    }
-    
+    // Users can read their own user document, Admins can read any user document
     match /users/{userId} {
-      allow read: if isAuth() && (isOwner(userId) || isAdmin());
-      allow update: if isAuth() && (isOwner(userId) || isAdmin());
-      // Only allow creation if the user is creating their own document
-      allow create: if isAuth() && isOwner(userId);
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated(); // For new user registration
+      allow update: if isAuthenticated() && request.auth.uid == userId; // Users can update their own profile
+      allow delete: if isAdmin(); // Only Admins can delete users
     }
     
+    // Settings can only be read by authenticated users, and written by admins
+    match /settings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Leads can be read by their owner, assigned structure team member, or certain roles.
+    // Leads can be created by authenticated users.
+    // Leads can be updated by their owner, assigned member, or Admin/Director.
     match /leads/{leadId} {
-        allow read, write: if isAuth() && 
-          (
-            resource.data.ownerId == request.auth.uid || 
-            resource.data.structureTeamMemberId == request.auth.uid ||
-            isAdmin() ||
-            isDirector() ||
-            isViewer()
-           );
-        allow create: if isAuth(); // Any authenticated user can create a lead
-        allow delete: if isAdmin();
-    }
-
-    match /tasks/{taskId} {
-        allow read, write: if isAuth() && resource.data.assigneeId == request.auth.uid;
-        allow create: if isAuth(); // User can create tasks for themselves or others
-        allow delete: if isAuth() && (resource.data.createdBy == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated() && 
+                    (request.auth.uid == resource.data.ownerId ||
+                     request.auth.uid == resource.data.structureTeamMemberId ||
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Director', 'Viewer']);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+                    (request.auth.uid == resource.data.ownerId ||
+                     request.auth.uid == resource.data.structureTeamMemberId ||
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Director']);
+      allow delete: if isAdmin();
     }
     
-    match /conversations/{conversationId} {
-        allow read, write: if isAuth() && request.auth.uid in resource.data.participants;
-
-        match /messages/{messageId} {
-            allow read, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        }
+    // Tasks can be read/updated by the assignee. Only the creator or an admin can delete.
+    match /tasks/{taskId} {
+        allow read, update: if isAuthenticated() && request.auth.uid == resource.data.assigneeId;
+        allow create: if isAuthenticated();
+        allow delete: if isAuthenticated() && (request.auth.uid == resource.data.createdBy || isAdmin());
     }
-
-    match /settings/branding {
-        allow read: if true; // Branding logo is public
-        allow write: if isAdmin();
+    
+    // Conversations can be accessed only by participants.
+    match /conversations/{conversationId} {
+        allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participants;
+        
+        // Messages can be read by conversation participants, and created by the author.
+        match /messages/{messageId} {
+            allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+            allow create: if isAuthenticated() && request.auth.uid == request.resource.data.authorId;
+        }
     }
   }
 }

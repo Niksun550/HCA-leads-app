@@ -79,7 +79,7 @@ const LeadCheckboxList = ({ leads, selectedLeads, onSelectLead }: { leads: Campa
 
 
 export default function ToolsPage() {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const [allDbLeads, setAllDbLeads] = useState<CampaignLead[]>([]);
     const [uploadedLeads, setUploadedLeads] = useState<CampaignLead[]>([]);
@@ -107,8 +107,8 @@ export default function ToolsPage() {
 
     // Fetch all leads once on component mount
     useEffect(() => {
-        if (!isInitialized || !user) {
-            if (isInitialized) setLoading(false);
+        if (isAuthLoading || !user) {
+            if (!isAuthLoading) setLoading(false);
             return;
         }
 
@@ -140,7 +140,7 @@ export default function ToolsPage() {
         });
 
         return () => unsubscribe();
-    }, [user, isInitialized]);
+    }, [user, isAuthLoading]);
 
     
     const marketingDbLeads = useMemo(() => {

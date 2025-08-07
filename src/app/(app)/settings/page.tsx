@@ -40,7 +40,7 @@ const profileFormSchema = z.object({
 });
 
 const ProfileSettings = () => {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,7 @@ const ProfileSettings = () => {
         }
     }, [user, form]);
     
-    if (!isInitialized || !user) {
+    if (isAuthLoading || !user) {
         return <Skeleton className="h-96 w-full" />
     }
 
@@ -75,8 +75,6 @@ const ProfileSettings = () => {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
             await updateDoc(userDocRef, { displayName: values.displayName });
             toast({ title: "Success", description: "Profile updated successfully." });
-            // This is a workaround to force re-fetch of user data in useAuth
-            router.refresh(); 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
@@ -126,7 +124,6 @@ const ProfileSettings = () => {
             await updateDoc(userDocRef, { photoURL });
 
             toast({ title: "Success", description: "Profile picture updated."});
-            router.refresh();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
         } finally {
@@ -211,16 +208,16 @@ const ProfileSettings = () => {
 }
 
 export default function SettingsPage() {
-  const { user, isInitialized } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   
   useEffect(() => {
-    if (isInitialized && !user) {
-      router.replace('/dashboard');
+    if (!isAuthLoading && !user) {
+      router.replace('/login');
     }
-  }, [isInitialized, user, router]);
+  }, [isAuthLoading, user, router]);
 
-  if (!isInitialized || !user) {
+  if (isAuthLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />

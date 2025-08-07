@@ -9,7 +9,5 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-  // isInitialized is deprecated, use isLoading instead
-  const { isLoading, ...rest } = context;
-  return { ...rest, isInitialized: !isLoading, isLoading };
+  return context;
 };

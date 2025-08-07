@@ -41,7 +41,7 @@ const ClientLeadsChart = dynamic(() => import('@/components/dashboard/client-lea
 
 
 export default function DashboardPage() {
-  const { user, isInitialized } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +68,8 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    if (!isInitialized || !user) {
-        if(isInitialized) setLoading(false);
+    if (isAuthLoading || !user) {
+        if(!isAuthLoading) setLoading(false);
         return;
     }
     
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         }
     };
 
-  }, [user, isInitialized]);
+  }, [user, isAuthLoading]);
 
   const handleAddLead = () => {
     setSelectedLead(null);
@@ -205,7 +205,7 @@ export default function DashboardPage() {
   };
 
 
-  if (!isInitialized || loading || !user || Object.keys(statusFilters).length === 0) {
+  if (isAuthLoading || loading || !user || Object.keys(statusFilters).length === 0) {
     return (
        <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />

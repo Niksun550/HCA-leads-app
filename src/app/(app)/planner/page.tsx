@@ -32,7 +32,7 @@ const categoryIcons: Record<TaskCategory, React.ReactNode> = {
 };
 
 export default function PlannerPage() {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
     const [allLeads, setAllLeads] = useState<Lead[]>([]);
@@ -49,7 +49,7 @@ export default function PlannerPage() {
     }, [currentDate]);
     
      useEffect(() => {
-        if (!isInitialized || !user) return;
+        if (isAuthLoading || !user) return;
         
         const { db } = getFirebaseServices();
         if (!db) return;
@@ -72,11 +72,11 @@ export default function PlannerPage() {
         });
 
         return () => unsubscribeLeads();
-    }, [isInitialized, user]);
+    }, [isAuthLoading, user]);
 
     useEffect(() => {
-        if (!isInitialized || !user || weekDates.length === 0) {
-            if (isInitialized) setLoading(false);
+        if (isAuthLoading || !user || weekDates.length === 0) {
+            if (!isAuthLoading) setLoading(false);
             return;
         }
 
@@ -111,14 +111,14 @@ export default function PlannerPage() {
         });
 
         return () => unsubscribeTasks();
-    }, [user, isInitialized, weekDates]);
+    }, [user, isAuthLoading, weekDates]);
     
     const handleTaskClick = (task: Task) => {
         setSelectedTask(task);
         setIsTaskFormOpen(true);
     };
 
-    if (!isInitialized || loading || !user) {
+    if (isAuthLoading || loading || !user) {
         return (
             <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
                 <LoaderCircle className="h-12 w-12 animate-spin text-primary" />

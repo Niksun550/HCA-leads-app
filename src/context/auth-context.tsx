@@ -3,7 +3,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { getFirebaseServices } from "@/lib/firebase";
 import type { AppUser, RolePermissions } from "@/types";
 
@@ -61,20 +61,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        try {
-          const userDocRef = doc(db, "users", firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
-          
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        
+        // Use onSnapshot to listen for real-time updates to user doc (e.g. role changes)
+        const unsubUser = onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             let userData = userDoc.data() as AppUser;
             
             if (userData.role === 'Admin') {
                 userData.permissions = allAdminPermissions;
             } else if (!userData.permissions) {
-                // If a user exists but has no permissions object, give them defaults.
-                // This handles users created before the permissions feature was added.
                 userData.permissions = defaultPermissions;
             }
             
@@ -86,9 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               photoURL: firebaseUser.photoURL || userData.photoURL,
             });
           } else {
-             // This case is unlikely if registration is always creating a doc,
-             // but as a fallback, create a user object with default permissions.
-             console.warn(`No user document found for UID: ${firebaseUser.uid}. Using default permissions.`);
+             console.warn(`No user document found for UID: ${firebaseUser.uid}. This may happen during registration.`);
              setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -98,14 +94,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               permissions: defaultPermissions
             });
           }
-        } catch (error) {
-          console.error("Error fetching user document:", error);
-          setUser(null);
-        }
+           setIsLoading(false);
+        }, (error) => {
+           console.error("Error fetching user document:", error);
+           setUser(null);
+           setIsLoading(false);
+        });
+        
+        return () => unsubUser(); // Unsubscribe from user doc listener on cleanup
+
       } else {
         setUser(null);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();

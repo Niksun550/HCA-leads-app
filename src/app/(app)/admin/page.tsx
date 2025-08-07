@@ -82,7 +82,7 @@ const allNavItems = [
 ];
 
 const AdminPage = () => {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const [users, setUsers] = useState<AppUser[]>([]);
@@ -105,14 +105,14 @@ const AdminPage = () => {
 
 
     useEffect(() => {
-        if (isInitialized) {
+        if (!isAuthLoading) {
             if (!user || user.role !== 'Admin') {
                 router.replace('/dashboard');
             } else {
                 fetchUsers();
             }
         }
-    }, [user, isInitialized, router]);
+    }, [user, isAuthLoading, router]);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -295,7 +295,7 @@ const AdminPage = () => {
         );
     };
     
-    if (!isInitialized || loading || !user) {
+    if (isAuthLoading || loading || !user) {
         return (
             <div className="flex h-[calc(100vh_-_theme(spacing.16))] w-full items-center justify-center bg-background">
                 <LoaderCircle className="h-12 w-12 animate-spin text-primary" />

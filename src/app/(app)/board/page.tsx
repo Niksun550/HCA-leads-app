@@ -94,14 +94,14 @@ const Column = ({ column, columnId }: { column: { name: TaskStatus; items: Task[
 
 
 export default function BoardPage() {
-    const { user, isInitialized } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [columns, setColumns] = useState<BoardData | null>(null);
 
     useEffect(() => {
-        if (!isInitialized || !user) {
-            if (isInitialized) setLoading(false);
+        if (isAuthLoading || !user) {
+            if (!isAuthLoading) setLoading(false);
             return;
         }
 
@@ -143,7 +143,7 @@ export default function BoardPage() {
         });
 
         return () => unsubscribeTasks();
-    }, [user, isInitialized, toast]);
+    }, [user, isAuthLoading, toast]);
 
     const onDragEnd = async (result: DropResult) => {
         if (!result.destination || !columns) return;
@@ -200,7 +200,7 @@ export default function BoardPage() {
         }
     };
     
-    if (loading || !isInitialized || !user) {
+    if (loading || isAuthLoading || !user) {
         return (
              <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
                 <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
