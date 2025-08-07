@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export const HcaLogo = ({ className }: { className?: string }) => {
+export const HcaLogo = ({ className, ...props }: { className?: string, width?: number, height?: number }) => {
   return (
     <svg
       width="100"
@@ -9,6 +9,7 @@ export const HcaLogo = ({ className }: { className?: string }) => {
       className={cn("h-8 w-8", className)}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      {...props}
     >
       <g>
         <circle cx="50" cy="50" r="48" fill="#F8F8F8" />
@@ -38,3 +39,6 @@ export const HcaLogo = ({ className }: { className?: string }) => {
     </svg>
   );
 };
+
+export const HcaLogoIcon192 = () => <HcaLogo width={192} height={192} className="w-48 h-48"/>
+export const HcaLogoIcon512 = () => <HcaLogo width={512} height={512} className="w-[512px] h-[512px]"/>
