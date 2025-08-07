@@ -1,13 +1,41 @@
-// This is a basic service worker file for PWA installability.
-// It can be expanded later for offline caching and other features.
+const CACHE_NAME = 'hcasolar-cache-v1';
+const urlsToCache = [
+  '/',
+  '/dashboard',
+  '/manifest.json',
+  '/hca-logo-192.png',
+  '/hca-logo-512.png'
+];
 
-self.addEventListener('install', (event) => {
-  // Perform install steps
-  console.log('Service Worker installing.');
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
+  );
 });
 
-self.addEventListener('fetch', (event) => {
-  // This simple service worker doesn't intercept fetch requests.
-  // It's just here to make the app installable.
-  event.respondWith(fetch(event.request));
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
+  );
+});
+
+self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
 });
