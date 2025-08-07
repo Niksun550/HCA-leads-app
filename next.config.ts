@@ -23,18 +23,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  async rewrites() {
-    return [
-      {
-        source: '/hca-logo-192.png',
-        destination: '/api/logo?size=192',
-      },
-      {
-        source: '/hca-logo-512.png',
-        destination: '/api/logo?size=512',
-      },
-    ]
-  },
 };
 
 export default nextConfig;
