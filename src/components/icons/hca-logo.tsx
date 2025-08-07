@@ -10,19 +10,31 @@ export const HcaLogo = ({ className }: { className?: string }) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path
-        d="M14.6855 83.3333V16.6667H31.954V43.8333H68.046V16.6667H85.3145V83.3333H68.046V56.1667H31.954V83.3333H14.6855Z"
-        fill="#166534"
-      />
-      <path
-        d="M52.5 0C40.021 0 27.6497 6.83778 20.1005 16.9061C12.5513 26.9744 10.2378 40.3901 13.9117 52.8124C17.5855 65.2347 26.827 75.7321 38.6202 80.9918C50.4133 86.2516 63.4452 85.6719 74.0371 79.5596C84.629 73.4472 91.6667 62.3529 91.6667 50"
-        stroke="#F5B01A"
-        strokeWidth="10"
-      />
-      <path
-        d="M62.8034 56.519C64.2132 58.4088 66.1959 59.8025 68.4736 60.5165C70.7513 61.2305 73.2165 61.2305 75.4942 60.5165C77.7719 59.8025 79.7546 58.4088 81.1643 56.519C82.5741 54.6291 83.3333 52.3394 83.3333 50H91.0387C91.0387 45.952 89.3948 42.0746 86.5784 39.2582C83.762 36.4418 79.8846 34.7979 75.8366 34.7979C71.7886 34.7979 67.9112 36.4418 65.0948 39.2582C62.2784 42.0746 60.6345 45.952 60.6345 50C60.6345 52.3394 61.3937 54.6291 62.8034 56.519Z"
-        fill="#F5B01A"
-      />
+      <g>
+        <circle cx="50" cy="50" r="48" fill="#F8F8F8" />
+        <circle cx="50" cy="50" r="46" stroke="#C8A866" strokeWidth="3" fill="white"/>
+        <path
+          d="M26.5 28V72H36.5V53H63.5V72H73.5V28H63.5V46H36.5V28H26.5Z"
+          fill="#166534"
+        />
+        <path
+          d="M84 59C84 70.0457 75.0457 79 64 79C52.9543 79 44 70.0457 44 59C44 54.5558 45.4193 50.4855 47.8098 47.2227"
+          stroke="#F5B01A"
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+        <g fill="#F5B01A">
+          <circle cx="64" cy="46" r="6" />
+          <path d="M64 36V39" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M72.0711 37.9289L69.9497 40.0503" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M75 46H72" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M72.0711 54.0711L69.9497 51.9497" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M64 56V53" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M55.9289 54.0711L58.0503 51.9497" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M53 46H56" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M55.9289 37.9289L58.0503 40.0503" stroke="#F5B01A" strokeWidth="2" strokeLinecap="round"/>
+        </g>
+      </g>
     </svg>
   );
 };
