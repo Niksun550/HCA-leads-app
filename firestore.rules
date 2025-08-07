@@ -4,65 +4,63 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isUserOneOfRoles(roles) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    function isAuth() {
+      return request.auth != null;
     }
 
-    match /users/{userId} {
-      // READ: User can read their own doc. Admin, Director, Viewer can read any doc.
-      allow read: if request.auth.uid == userId || isUserOneOfRoles(['Admin', 'Director', 'Viewer']);
-      
-      // LIST: Admin, Director, Sales Reps can list users (for dropdowns, etc.)
-      allow list: if isUserOneOfRoles(['Admin', 'Director', 'Sales Rep']);
-      
-      // CREATE: Any authenticated user can create their own user document during signup.
-      allow create: if request.auth.uid != null;
-
-      // UPDATE: A user can update their own document. 
-      // An Admin can update another user's document BUT CANNOT change their role.
-      allow update: if (request.auth.uid == userId) || 
-                    (isUserOneOfRoles(['Admin']) && request.resource.data.role == resource.data.role);
-
-      // DELETE: Only Admins can delete users.
-      allow delete: if isUserOneOfRoles(['Admin']);
-    }
-
-    match /leads/{leadId} {
-        // READ: User can read a lead if they are owner, assigned structure member, or an Admin/Viewer/Director.
-        // A 'Structure' user can also read a lead if its status is relevant to them (e.g., 'Structure Pending').
-        allow read: if request.auth.uid == resource.data.ownerId 
-                    || request.auth.uid == resource.data.structureTeamMemberId 
-                    || isUserOneOfRoles(['Admin', 'Viewer', 'Director'])
-                    || (isUserOneOfRoles(['Structure']) && resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']);
-        
-        // LIST: Roles that can query the leads collection. Further filtering is done with read rules and query `where` clauses.
-        allow list: if isUserOneOfRoles(['Admin', 'Viewer', 'Director', 'Sales Rep', 'Structure']);
-
-        // CREATE/UPDATE: User can create/update if they are the owner or an Admin/Director. Structure team can only update.
-        allow create: if isUserOneOfRoles(['Admin', 'Sales Rep', 'Director']);
-        allow update: if request.auth.uid == resource.data.ownerId || isUserOneOfRoles(['Admin', 'Director', 'Structure']);
-        
-        // DELETE: Only Admins can delete leads.
-        allow delete: if isUserOneOfRoles(['Admin']);
+    function isAdmin() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
     
-    match /tasks/{taskId} {
-        // READ/WRITE: User can read/write a task if they are the assignee or creator.
-        // Admin/Director/Viewer can also read any task.
-        allow read: if request.auth.uid == resource.data.assigneeId 
-                    || request.auth.uid == resource.data.createdBy
-                    || isUserOneOfRoles(['Admin', 'Director', 'Viewer']);
-        allow write: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
+    function isDirector() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Director';
+    }
+    
+    function isViewer() {
+        return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Viewer';
     }
 
+    function isOwner(resourceId) {
+      return request.auth.uid == resourceId;
+    }
+    
+    match /users/{userId} {
+      allow read: if isAuth() && (isOwner(userId) || isAdmin());
+      allow update: if isAuth() && (isOwner(userId) || isAdmin());
+      // Only allow creation if the user is creating their own document
+      allow create: if isAuth() && isOwner(userId);
+    }
+    
+    match /leads/{leadId} {
+        allow read, write: if isAuth() && 
+          (
+            resource.data.ownerId == request.auth.uid || 
+            resource.data.structureTeamMemberId == request.auth.uid ||
+            isAdmin() ||
+            isDirector() ||
+            isViewer()
+           );
+        allow create: if isAuth(); // Any authenticated user can create a lead
+        allow delete: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+        allow read, write: if isAuth() && resource.data.assigneeId == request.auth.uid;
+        allow create: if isAuth(); // User can create tasks for themselves or others
+        allow delete: if isAuth() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+    
     match /conversations/{conversationId} {
-        // User can access a conversation document if they are a participant.
-        allow read, write: if request.auth.uid in resource.data.participants;
+        allow read, write: if isAuth() && request.auth.uid in resource.data.participants;
 
         match /messages/{messageId} {
-            // User can read/create messages if they are part of the parent conversation.
-            allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+            allow read, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
         }
+    }
+
+    match /settings/branding {
+        allow read: if true; // Branding logo is public
+        allow write: if isAdmin();
     }
   }
 }
