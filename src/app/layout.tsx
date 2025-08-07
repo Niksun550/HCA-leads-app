@@ -32,7 +32,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="HCASolar CRM" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#FFFFFF" />
+        <meta name="theme-color" content="#ffffff" />
         <link rel="apple-touch-icon" href="/hca-logo-192.png" />
       </head>
       <body className={cn('font-body antialiased', inter.variable)}>
