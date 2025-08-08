@@ -206,7 +206,7 @@ const MobileBottomNav = () => {
     const mainNavItems = [
         { key: 'dashboard', href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
         { key: 'communication', href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Communication" },
-        { key: 'tools', href: "/tools", icon: <Wrench className="h-6 w-6" />, label: "Tools" },
+        { key: 'utility', href: "/tasks", icon: <ClipboardList className="h-6 w-6" />, label: "Utility" },
         { key: 'board', href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
     ].filter(item => navItems[item.key as keyof typeof navItems]);
 
@@ -214,7 +214,7 @@ const MobileBottomNav = () => {
     return (
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex sm:hidden items-center justify-around">
             {mainNavItems.map(item => (
-                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)}>
+                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href) || (item.label === 'Utility' && pathname.startsWith('/planner'))}>
                     {item.icon}
                 </MobileBottomNavLink>
             ))}
@@ -238,8 +238,7 @@ const MobileBottomNav = () => {
                               </p>
                             </div>
                          </div>
-                        {navItems.tasks && <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>}
-                        {navItems.planner && <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>}
+                        {navItems.tools && <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>}
                         {navItems.settings && <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>}
                         {navItems.admin && <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>}
                          <DropdownMenuSeparator />
