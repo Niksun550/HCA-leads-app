@@ -9,8 +9,8 @@ import { addDoc, collection, doc, setDoc, Timestamp, updateDoc, arrayUnion } fro
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import type { Lead, AppUser, Remark, Attachment, Message } from "@/types";
-import { leadStatuses, leadSources, meterTypes, propertyTypes, structureLeadStatuses } from "@/types";
+import type { Lead, AppUser, Remark, Attachment, Message, LeadLabel } from "@/types";
+import { leadStatuses, leadSources, meterTypes, propertyTypes, structureLeadStatuses, leadLabels } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 import Image from 'next/image';
@@ -45,13 +45,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare, ListTodo, Wand2 } from "lucide-react";
+import { CalendarIcon, LoaderCircle, LocateFixed, X, Paperclip, Download, UploadCloud, File as FileIcon, MessageSquare, ListTodo, Wand2, Flame, Snowflake, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LeadChat } from "./lead-chat";
 import TaskForm from "@/components/tasks/task-form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface LeadFormProps {
   isOpen: boolean;
@@ -70,6 +71,7 @@ const formSchema = z.object({
   ownerId: z.string().min(1, { message: "Lead owner is required" }),
   leadBy: z.enum(leadSources, { required_error: "Lead source is required" }),
   status: z.enum(leadStatuses, { required_error: "Status is required" }),
+  label: z.enum(leadLabels).optional(),
   location: z.object({
     latitude: z.number(),
     longitude: z.number(),
@@ -78,6 +80,13 @@ const formSchema = z.object({
   newRemark: z.string().optional(),
   structureTeamMemberId: z.string().optional().nullable(),
 });
+
+const labelOptions = [
+  { value: 'Hot', icon: Flame, color: "text-red-500" },
+  { value: 'Cold', icon: Snowflake, color: "text-blue-500" },
+  { value: 'Hold', icon: PauseCircle, color: "text-gray-500" },
+] as const;
+
 
 export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormProps) {
   const { user } = useAuth();
@@ -104,6 +113,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
       ownerId: user?.uid,
       leadBy: 'Canopy',
       status: 'New',
+      label: 'None',
       location: null,
       visitDates: [],
       newRemark: "",
@@ -141,6 +151,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         propertyType: lead.propertyType || 'Residential',
         visitDates: lead.visitDates ? lead.visitDates.map(ts => ts.toDate()) : [],
         structureTeamMemberId: lead.structureTeamMemberId || null,
+        label: lead.label || 'None',
         newRemark: "",
       });
       setAttachments(lead.attachments || []);
@@ -156,6 +167,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         ownerId: user?.uid,
         leadBy: 'Canopy',
         status: 'New',
+        label: 'None',
         location: null,
         visitDates: [],
         newRemark: "",
@@ -276,6 +288,7 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
         ownerName: owner.displayName || '',
         leadBy: values.leadBy,
         status: values.status,
+        label: values.label,
         location: values.location,
         visitDates: values.visitDates.map(d => Timestamp.fromDate(d)),
         createdAt: lead ? lead.createdAt : Timestamp.now(),
@@ -406,6 +419,38 @@ export default function LeadForm({ isOpen, setIsOpen, lead, users }: LeadFormPro
                     <TabsContent value="details">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} id="lead-form" className="space-y-4 pt-4">
+                                <FormField
+                                  name="label"
+                                  control={form.control}
+                                  render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                      <FormLabel>Label</FormLabel>
+                                      <FormControl>
+                                        <RadioGroup
+                                          onValueChange={field.onChange}
+                                          value={field.value}
+                                          className="flex items-center space-x-1"
+                                        >
+                                           {labelOptions.map(opt => (
+                                            <FormItem key={opt.value} className="flex-1">
+                                              <FormControl>
+                                                <RadioGroupItem value={opt.value} className="sr-only" />
+                                              </FormControl>
+                                              <FormLabel className={cn(
+                                                  "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground cursor-pointer",
+                                                  field.value === opt.value && "border-primary"
+                                              )}>
+                                                <opt.icon className={cn("h-6 w-6 mb-1", opt.color)} />
+                                                {opt.value}
+                                              </FormLabel>
+                                            </FormItem>
+                                          ))}
+                                        </RadioGroup>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField name="customerName" control={form.control} render={({ field }) => (
                                     <FormItem>

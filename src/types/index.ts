@@ -44,6 +44,9 @@ export const meterTypes: MeterType[] = ['1 Phase', '3 Phase'];
 export type PropertyType = 'Commercial' | 'Residential' | 'Industries';
 export const propertyTypes: PropertyType[] = ['Commercial', 'Residential', 'Industries'];
 
+export type LeadLabel = 'Hot' | 'Cold' | 'Hold' | 'None';
+export const leadLabels: LeadLabel[] = ['Hot', 'Cold', 'Hold', 'None'];
+
 export interface Remark {
   text: string;
   createdAt: Timestamp;
@@ -90,6 +93,7 @@ export interface Lead {
   closedAt?: Timestamp | null;
   structureTeamMemberId?: string | null;
   structureTeamMemberName?: string | null;
+  label?: LeadLabel;
 }
 
 export interface Conversation {

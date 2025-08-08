@@ -19,8 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MoreHorizontal, Trash2, Edit, MapPin } from "lucide-react";
-import type { Lead } from "@/types";
+import { MoreHorizontal, Trash2, Edit, MapPin, Flame, Snowflake, PauseCircle } from "lucide-react";
+import type { Lead, LeadLabel } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { getFirebaseServices } from "@/lib/firebase";
@@ -37,12 +37,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 const WhatsAppIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
     </svg>
 )
+
+const labelIcons: Record<LeadLabel, React.ReactNode> = {
+  Hot: <Flame className="h-4 w-4 text-red-500" />,
+  Cold: <Snowflake className="h-4 w-4 text-blue-500" />,
+  Hold: <PauseCircle className="h-4 w-4 text-gray-500" />,
+  None: null
+};
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -87,6 +96,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
 
   return (
     <div className="rounded-lg border shadow-sm bg-card">
+      <TooltipProvider>
       <Table>
         <TableHeader>
           <TableRow>
@@ -103,8 +113,22 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             leads.map((lead) => (
               <TableRow key={lead.id}>
                 <TableCell>
-                  <div className="font-medium">{lead.customerName}</div>
-                  <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
+                  <div className="flex items-center gap-2">
+                     {lead.label && lead.label !== 'None' && (
+                       <Tooltip>
+                          <TooltipTrigger>
+                            {labelIcons[lead.label]}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{lead.label} Lead</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    <div>
+                      <div className="font-medium">{lead.customerName}</div>
+                      <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {lead.structureTeamMemberName ? (
@@ -182,6 +206,7 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
           )}
         </TableBody>
       </Table>
+      </TooltipProvider>
     </div>
   );
 }
