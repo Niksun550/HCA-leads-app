@@ -109,7 +109,7 @@ export default function TasksPage() {
                     <p className="text-muted-foreground">Manage your daily tasks and priorities.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleAddTask}>
+                    <Button onClick={handleAddTask} className="hidden sm:inline-flex">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Task
                     </Button>
@@ -121,6 +121,15 @@ export default function TasksPage() {
                 onEdit={handleEditTask} 
                 onDelete={handleDeleteTask}
             />
+
+            <Button 
+                onClick={handleAddTask}
+                className="sm:hidden fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg"
+                size="icon"
+            >
+                <PlusCircle className="h-7 w-7" />
+                <span className="sr-only">Add Task</span>
+            </Button>
 
             <TaskForm
                 isOpen={isFormOpen}

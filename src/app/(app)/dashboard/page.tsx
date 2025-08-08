@@ -225,6 +225,7 @@ export default function DashboardPage() {
   }
 
   const isDirectorOrAdmin = user.role === 'Director' || user.role === 'Admin';
+  const canAddLead = user.role !== 'Viewer' && user.role !== 'Structure';
 
   return (
     <div className="py-4 space-y-8">
@@ -280,8 +281,8 @@ export default function DashboardPage() {
              <FileSpreadsheet className="mr-2 h-4 w-4" />
              Export
           </Button>
-          {user.role !== 'Viewer' && user.role !== 'Structure' && (
-            <Button onClick={handleAddLead}>
+          {canAddLead && (
+            <Button onClick={handleAddLead} className="hidden sm:inline-flex">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Lead
             </Button>
@@ -330,6 +331,17 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {canAddLead && (
+         <Button 
+          onClick={handleAddLead}
+          className="sm:hidden fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg"
+          size="icon"
+        >
+          <PlusCircle className="h-7 w-7" />
+          <span className="sr-only">Add Lead</span>
+        </Button>
+      )}
+
       <LeadForm
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
@@ -340,3 +352,9 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+const ForecastingDashboard = ({ leads }: { leads: Lead[] }) => (
+    <div className="space-y-8">
+        <p className="text-muted-foreground">This is a placeholder for the forecasting dashboard.</p>
+    </div>
+);

@@ -223,7 +223,7 @@ const MobileBottomNav = () => {
                        <MoreHorizontal className="h-6 w-6" />
                     </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 p-2 mb-2">
+                <PopoverContent className="w-64 p-2 mb-20" align="end">
                     <div className="flex flex-col space-y-1">
                          <div className="flex items-center gap-3 p-2 mb-2 border-b pb-3">
                              <Avatar className="h-9 w-9">
