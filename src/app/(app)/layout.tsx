@@ -78,12 +78,6 @@ const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, lo
                     Dashboard
                 </NavLink>
               )}
-              {navItems?.communication && (
-                <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
-                    <MessageCircle className="h-5 w-5" />
-                    Communication
-                </NavLink>
-              )}
               {navItems?.utility && (
                 <Collapsible open={isUtilityOpen} onOpenChange={setIsUtilityOpen}>
                     <CollapsibleTrigger className="flex items-center justify-between w-full gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>div>svg]:rotate-180">
@@ -205,7 +199,7 @@ const MobileBottomNav = () => {
 
     const mainNavItems = [
         { key: 'dashboard', href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
-        { key: 'communication', href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Chat" },
+        { key: 'tools', href: "/tools", icon: <Wrench className="h-6 w-6" />, label: "Tools" },
         { key: 'board', href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
     ].filter(item => navItems[item.key as keyof typeof navItems]);
 
@@ -239,7 +233,6 @@ const MobileBottomNav = () => {
                          </div>
                         {navItems.tasks && <NavLink href="/tasks" isActive={pathname.startsWith('/tasks')}><CheckSquare className="h-5 w-5" /> Tasks</NavLink>}
                         {navItems.planner && <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>}
-                        {navItems.tools && <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>}
                         {navItems.settings && <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>}
                         {navItems.admin && <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>}
                          <DropdownMenuSeparator />

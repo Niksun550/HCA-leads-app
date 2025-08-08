@@ -36,6 +36,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
+
+const WhatsAppIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+)
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -45,6 +52,7 @@ interface LeadsTableProps {
 export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleDelete = async (leadId: string) => {
     const { db } = getFirebaseServices();
@@ -71,6 +79,10 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
   const handleViewOnMap = (address: string) => {
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     window.open(googleMapsUrl, '_blank');
+  };
+  
+  const handleSendWhatsApp = (leadId: string) => {
+    router.push(`/tools?leadId=${leadId}`);
   };
 
   return (
@@ -110,48 +122,54 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">{lead.kwRequirement} KW</TableCell>
                 <TableCell className="text-right">
-                  {user?.role !== 'Viewer' && (
-                     <AlertDialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(lead)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleViewOnMap(lead.address)}>
-                            <MapPin className="mr-2 h-4 w-4" /> View on Map
-                          </DropdownMenuItem>
-                          {user?.role === 'Admin' && (
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this lead
-                            and remove its data from our servers.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(lead.id)} className="bg-destructive hover:bg-destructive/90">
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                  <div className="flex items-center justify-end gap-1">
+                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendWhatsApp(lead.id)}>
+                        <WhatsAppIcon />
+                        <span className="sr-only">Send WhatsApp</span>
+                     </Button>
+                      {user?.role !== 'Viewer' && (
+                         <AlertDialog>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => onEdit(lead)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => handleViewOnMap(lead.address)}>
+                                <MapPin className="mr-2 h-4 w-4" /> View on Map
+                              </DropdownMenuItem>
+                              {user?.role === 'Admin' && (
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this lead
+                                and remove its data from our servers.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(lead.id)} className="bg-destructive hover:bg-destructive/90">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))

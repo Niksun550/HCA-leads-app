@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useSearchParams } from 'next/navigation'
 import { collection, onSnapshot, query, Query } from 'firebase/firestore';
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
@@ -81,6 +82,8 @@ const LeadCheckboxList = ({ leads, selectedLeads, onSelectLead }: { leads: Campa
 export default function ToolsPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+    const leadIdFromQuery = searchParams.get('leadId');
     const [allDbLeads, setAllDbLeads] = useState<CampaignLead[]>([]);
     const [uploadedLeads, setUploadedLeads] = useState<CampaignLead[]>([]);
     const [selectedLeads, setSelectedLeads] = useState<Record<string, boolean>>({});
@@ -134,13 +137,20 @@ export default function ToolsPage() {
             });
             setAllDbLeads(leadsData);
             setLoading(false);
+            
+            if (leadIdFromQuery) {
+                const leadExists = leadsData.some(lead => lead.id === leadIdFromQuery);
+                if (leadExists) {
+                    setSelectedLeads({ [leadIdFromQuery]: true });
+                }
+            }
         }, (error) => {
             console.error("Error fetching all leads:", error);
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [user, isAuthLoading]);
+    }, [user, isAuthLoading, leadIdFromQuery]);
 
     
     const marketingDbLeads = useMemo(() => {
@@ -346,8 +356,8 @@ export default function ToolsPage() {
     return (
         <div className="py-4 space-y-8">
             <header>
-                <h1 className="text-3xl font-bold font-headline tracking-tight">Tools</h1>
-                <p className="text-muted-foreground">Advanced features to boost your productivity.</p>
+                <h1 className="text-3xl font-bold font-headline tracking-tight">Messaging Tools</h1>
+                <p className="text-muted-foreground">Engage customers via WhatsApp and re-engage dropped leads.</p>
             </header>
 
             <Tabs defaultValue="marketing" onValueChange={(value) => setActiveTab(value as MainTabs)} className="w-full">
@@ -359,7 +369,7 @@ export default function ToolsPage() {
                 <TabsContent value="marketing">
                     <Card className="mt-4">
                         <CardHeader>
-                            <CardTitle>Marketing Campaign Builder</CardTitle>
+                            <CardTitle>WhatsApp Campaign Builder</CardTitle>
                             <CardDescription>Engage customers with personalized campaigns using text and images.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid lg:grid-cols-2 gap-12">
