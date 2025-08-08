@@ -4,21 +4,20 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Share, ArrowDownToLine } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 
 export function PwaInstaller() {
   const isMobile = useIsMobile();
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isIOsDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       setIsIOS(isIOsDevice);
       
-      // Check if the app is already installed
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      
-      // Check if the banner was dismissed before
       const dismissed = localStorage.getItem('pwaInstallBannerDismissed');
       
       if (isMobile && !isStandalone && !dismissed) {
@@ -28,19 +27,40 @@ export function PwaInstaller() {
   }, [isMobile]);
 
   useEffect(() => {
-    const handleServiceWorker = () => {
+    const registerServiceWorker = async () => {
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registered: ', registration);
-          }).catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
-          });
-        });
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('Service Worker registered with scope:', registration.scope);
+
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker) {
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    // New update available
+                     toast({
+                      title: "Update Available",
+                      description: "A new version of the app is available. Please close and reopen the app to update.",
+                    });
+                  } else {
+                    // Content is cached for offline use
+                    console.log('Content is cached for offline use.');
+                  }
+                }
+              };
+            }
+          };
+        } catch (error) {
+          console.error('Service Worker registration failed:', error);
+        }
       }
     };
-    handleServiceWorker();
-  }, []);
+
+    window.addEventListener('load', registerServiceWorker);
+    return () => window.removeEventListener('load', registerServiceWorker);
+  }, [toast]);
 
   const handleDismiss = () => {
     localStorage.setItem('pwaInstallBannerDismissed', 'true');
