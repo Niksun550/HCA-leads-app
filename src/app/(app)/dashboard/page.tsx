@@ -12,7 +12,6 @@ import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
 import LeadsMap from '@/components/dashboard/leads-map';
-import { ForecastingDashboard } from '@/components/dashboard/forecasting-dashboard';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -204,6 +203,18 @@ export default function DashboardPage() {
     XLSX.writeFile(workbook, `SolarLeads_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const areAllStatusesSelected = useMemo(() => {
+    return availableStatuses.every(status => statusFilters[status]);
+  }, [statusFilters, availableStatuses]);
+
+  const handleSelectAll = (checked: boolean) => {
+    const newFilters = { ...statusFilters };
+    availableStatuses.forEach(status => {
+      newFilters[status] = checked;
+    });
+    setStatusFilters(newFilters);
+  };
+
 
   if (isAuthLoading || loading || !user || Object.keys(statusFilters).length === 0) {
     return (
@@ -246,6 +257,13 @@ export default function DashboardPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                  checked={areAllStatusesSelected}
+                  onCheckedChange={handleSelectAll}
+                >
+                  Select All
+                </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               {availableStatuses.map((status) => (
                 <DropdownMenuCheckboxItem
