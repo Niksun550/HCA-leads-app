@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 
 const WhatsAppIcon = () => (
@@ -46,12 +47,12 @@ const WhatsAppIcon = () => (
     </svg>
 )
 
-const labelIcons: Record<LeadLabel, React.ReactNode> = {
-  Hot: <Flame className="h-4 w-4 text-red-500" />,
-  Cold: <Snowflake className="h-4 w-4 text-blue-500" />,
-  Hold: <PauseCircle className="h-4 w-4 text-gray-500" />,
-  None: null
-};
+const labelOptions: { value: LeadLabel; icon: React.ElementType; color: string; }[] = [
+  { value: 'Hot', icon: Flame, color: "text-red-500" },
+  { value: 'Cold', icon: Snowflake, color: "text-blue-500" },
+  { value: 'Hold', icon: PauseCircle, color: "text-gray-500" },
+];
+
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -113,22 +114,30 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             leads.map((lead) => (
               <TableRow key={lead.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                     {lead.label && lead.label !== 'None' && (
-                       <Tooltip>
-                          <TooltipTrigger>
-                            {labelIcons[lead.label]}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{lead.label} Lead</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
                     <div>
                       <div className="font-medium">{lead.customerName}</div>
                       <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
+                       {(lead.label && lead.label !== 'None') && (
+                         <div className="flex items-center gap-2 mt-2">
+                           {labelOptions.map((option) => {
+                             const isSelected = lead.label === option.value;
+                             return (
+                               <Tooltip key={option.value}>
+                                 <TooltipTrigger>
+                                   <option.icon className={cn(
+                                     "h-4 w-4",
+                                     isSelected ? option.color : "text-muted-foreground/50"
+                                   )} />
+                                 </TooltipTrigger>
+                                 <TooltipContent>
+                                   <p>{option.value} Lead</p>
+                                 </TooltipContent>
+                               </Tooltip>
+                             );
+                           })}
+                         </div>
+                       )}
                     </div>
-                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {lead.structureTeamMemberName ? (
