@@ -67,7 +67,7 @@ const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, lo
         <>
             <div className="flex h-16 shrink-0 items-center border-b px-6">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" /> : <HcaLogo className="h-8 w-8 text-primary" />}
+                {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" /> : <HcaLogo className="h-8 w-8" />}
                 <span className="font-headline text-lg">HCASolar CRM</span>
               </Link>
             </div>
@@ -81,7 +81,7 @@ const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, lo
                {navItems?.communication && (
                 <NavLink href="/communication" isActive={pathname.startsWith('/communication')} onClick={onLinkClick}>
                     <MessageCircle className="h-5 w-5" />
-                    Communication
+                    WhatsApp
                 </NavLink>
               )}
               {navItems?.utility && (
@@ -111,18 +111,18 @@ const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, lo
                     </CollapsibleContent>
                 </Collapsible>
               )}
-              {navItems?.tools && (
-                <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
-                    <Wrench className="h-5 w-5" />
-                    Tools
-                </NavLink>
-              )}
                {navItems?.board && (
                  <NavLink href="/board" isActive={pathname.startsWith('/board')} onClick={onLinkClick}>
                     <LayoutGrid className="h-5 w-5" />
                     Board
                  </NavLink>
                )}
+              {navItems?.tools && (
+                <NavLink href="/tools" isActive={pathname.startsWith('/tools')} onClick={onLinkClick}>
+                    <Wrench className="h-5 w-5" />
+                    Tools
+                </NavLink>
+              )}
               {navItems?.settings && (
                 <NavLink href="/settings" isActive={pathname.startsWith('/settings')} onClick={onLinkClick}>
                     <Settings className="h-5 w-5" />
@@ -205,7 +205,7 @@ const MobileBottomNav = () => {
 
     const mainNavItems = [
         { key: 'dashboard', href: "/dashboard", icon: <LayoutDashboard className="h-6 w-6" />, label: "Dashboard" },
-        { key: 'communication', href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "Communication" },
+        { key: 'communication', href: "/communication", icon: <MessageCircle className="h-6 w-6" />, label: "WhatsApp" },
         { key: 'utility', href: "/tasks", icon: <ClipboardList className="h-6 w-6" />, label: "Utility" },
         { key: 'board', href: "/board", icon: <LayoutGrid className="h-6 w-6" />, label: "Board" },
     ].filter(item => navItems[item.key as keyof typeof navItems]);
@@ -214,7 +214,7 @@ const MobileBottomNav = () => {
     return (
         <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex sm:hidden items-center justify-around">
             {mainNavItems.map(item => (
-                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href) || (item.label === 'Utility' && pathname.startsWith('/planner'))}>
+                <MobileBottomNavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href) && item.label !== "Utility" || (item.label === 'Utility' && (pathname.startsWith('/tasks')))}>
                     {item.icon}
                 </MobileBottomNavLink>
             ))}
@@ -238,6 +238,7 @@ const MobileBottomNav = () => {
                               </p>
                             </div>
                          </div>
+                        {navItems.planner && <NavLink href="/planner" isActive={pathname.startsWith('/planner')}><CalendarDays className="h-5 w-5" /> Planner</NavLink>}
                         {navItems.tools && <NavLink href="/tools" isActive={pathname.startsWith('/tools')}><Wrench className="h-5 w-5" /> Tools</NavLink>}
                         {navItems.settings && <NavLink href="/settings" isActive={pathname.startsWith('/settings')}><Settings className="h-5 w-5" /> Settings</NavLink>}
                         {navItems.admin && <NavLink href="/admin" isActive={pathname.startsWith('/admin')}><Shield className="h-5 w-5" /> Admin</NavLink>}
@@ -296,7 +297,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain"/> : <HcaLogo className="h-8 w-8 text-primary" />}
+            {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain"/> : <HcaLogo className="h-8 w-8" />}
             <span className="font-headline text-lg">HCASolar CRM</span>
           </Link>
         </header>
@@ -308,5 +309,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    
