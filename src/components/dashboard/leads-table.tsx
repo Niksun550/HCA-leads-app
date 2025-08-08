@@ -114,30 +114,26 @@ export function LeadsTable({ leads, onEdit }: LeadsTableProps) {
             leads.map((lead) => (
               <TableRow key={lead.id}>
                 <TableCell>
-                    <div>
-                      <div className="font-medium">{lead.customerName}</div>
-                      <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
-                       {(lead.label && lead.label !== 'None') && (
-                         <div className="flex items-center gap-2 mt-2">
-                           {labelOptions.map((option) => {
-                             const isSelected = lead.label === option.value;
-                             return (
-                               <Tooltip key={option.value}>
-                                 <TooltipTrigger>
-                                   <option.icon className={cn(
-                                     "h-4 w-4",
-                                     isSelected ? option.color : "text-muted-foreground/50"
-                                   )} />
-                                 </TooltipTrigger>
-                                 <TooltipContent>
-                                   <p>{option.value} Lead</p>
-                                 </TooltipContent>
-                               </Tooltip>
-                             );
-                           })}
-                         </div>
-                       )}
-                    </div>
+                  <div className="font-medium">{lead.customerName}</div>
+                  <div className="text-sm text-muted-foreground">{lead.mobileNumber}</div>
+                   <div className="flex items-center gap-2 mt-2">
+                     {labelOptions.map((option) => {
+                       const isSelected = lead.label === option.value;
+                       return (
+                         <Tooltip key={option.value}>
+                           <TooltipTrigger>
+                             <option.icon className={cn(
+                               "h-4 w-4",
+                               isSelected ? option.color : "text-muted-foreground/30"
+                             )} />
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             <p>{option.value} Lead</p>
+                           </TooltipContent>
+                         </Tooltip>
+                       );
+                     })}
+                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {lead.structureTeamMemberName ? (
