@@ -37,6 +37,9 @@ import { LoaderCircle, Upload } from 'lucide-react';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Name must be at least 2 characters."),
+  whatsappNumber: z.string().optional().refine(val => !val || /^\d+$/.test(val), {
+    message: "WhatsApp number must contain only digits.",
+  }),
 });
 
 const ProfileSettings = () => {
@@ -52,12 +55,16 @@ const ProfileSettings = () => {
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
             displayName: user?.displayName || "",
+            whatsappNumber: user?.whatsappNumber || ""
         },
     });
 
     useEffect(() => {
         if (user) {
-            form.reset({ displayName: user.displayName || "" });
+            form.reset({ 
+              displayName: user.displayName || "",
+              whatsappNumber: user.whatsappNumber || "",
+            });
         }
     }, [user, form]);
     
@@ -71,9 +78,16 @@ const ProfileSettings = () => {
         if (!auth.currentUser || !db) return;
 
         try {
+            // Update Auth profile
             await updateProfile(auth.currentUser, { displayName: values.displayName });
+            
+            // Update Firestore document
             const userDocRef = doc(db, "users", auth.currentUser.uid);
-            await updateDoc(userDocRef, { displayName: values.displayName });
+            await updateDoc(userDocRef, { 
+                displayName: values.displayName,
+                whatsappNumber: values.whatsappNumber || null,
+            });
+
             toast({ title: "Success", description: "Profile updated successfully." });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
@@ -177,6 +191,19 @@ const ProfileSettings = () => {
                                     <FormLabel>Full Name</FormLabel>
                                     <FormControl>
                                         <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="whatsappNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>WhatsApp Number</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} placeholder="e.g. 919876543210" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

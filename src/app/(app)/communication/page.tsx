@@ -1,16 +1,15 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { useAuth } from '@/hooks/use-auth';
-import type { AppUser, Conversation } from '@/types';
+import type { AppUser } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 import { UserList } from '@/components/communication/user-list';
-import { ChatWindow } from '@/components/communication/chat-window';
+import { WhatsAppChatWindow } from '@/components/communication/whatsapp-chat-window';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MessageSquare } from 'lucide-react';
@@ -19,165 +18,51 @@ export default function CommunicationPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<AppUser[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [usersLoading, setUsersLoading] = useState(true);
-  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
-  const conversationsRef = useRef<Conversation[]>([]);
-  const isInitialLoadRef = useRef(true);
-
 
   useEffect(() => {
     const { db } = getFirebaseServices();
     if (!db || !user) return;
 
-    setUsersLoading(true);
+    setLoading(true);
     const usersQuery = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       const usersData = snapshot.docs
         .map(doc => doc.data() as AppUser)
         .filter(u => u.uid !== user.uid);
       setUsers(usersData);
-      setUsersLoading(false);
+      setLoading(false);
     }, (error) => {
         console.error("Error fetching users:", error);
-        setUsersLoading(false);
+        setLoading(false);
     });
 
     return () => unsubscribeUsers();
   }, [user]);
-  
-  useEffect(() => {
-    if (!user) return;
-    const { db } = getFirebaseServices();
-    if (!db) return;
-    
-    setConversationsLoading(true);
-    const conversationsQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
-    
-    const unsubscribeConversations = onSnapshot(conversationsQuery, (snapshot) => {
-      const incomingConvs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        // When reading from onSnapshot, the timestamp is already a Firestore Timestamp
-        const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.now();
-        return { id: doc.id, ...data, updatedAt } as Conversation;
-      });
-      const previousConversations = conversationsRef.current;
-      
-      if (!isInitialLoadRef.current) {
-          incomingConvs.forEach(newConv => {
-              const oldConv = previousConversations.find(c => c.id === newConv.id);
-              const isNewMessage = !oldConv || (newConv.lastMessage && newConv.lastMessage.id !== oldConv?.lastMessage?.id);
 
-              if (isNewMessage && newConv.lastMessage && newConv.lastMessage.authorId !== user.uid) {
-                  if(selectedConversation?.id !== newConv.id) {
-                    const otherParticipantId = newConv.participants.find(p => p !== user.uid);
-                    const senderName = otherParticipantId ? newConv.participantNames[otherParticipantId] : 'Someone';
-                    toast({
-                        title: `New message from ${senderName}`,
-                        description: newConv.lastMessage?.text,
-                    });
-                  }
-              }
-          });
-      }
-
-      incomingConvs.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-      setConversations(incomingConvs);
-      conversationsRef.current = incomingConvs;
-      setConversationsLoading(false);
-      if (isInitialLoadRef.current) {
-        isInitialLoadRef.current = false;
-      }
-
-    }, (error) => {
-      console.error("Error fetching conversations:", error);
-      setConversationsLoading(false);
-    });
-
-    return () => {
-        unsubscribeConversations();
-        isInitialLoadRef.current = true;
-    }
-  }, [user, toast, selectedConversation?.id]);
-
-  const handleSelectUser = async (selectedUser: AppUser) => {
-    if (!user) return;
-    setIsCreatingConversation(true);
-
-    try {
-        const functions = getFunctions();
-        const createConversation = httpsCallable(functions, 'createConversation');
-        const result: any = await createConversation({ otherUserId: selectedUser.uid });
-        
-        const { conversationId } = result.data as { conversationId: string };
-
-        // We check if it is already in the list.
-        const existingConv = conversationsRef.current.find(c => c.id === conversationId);
-        if (existingConv) {
-          setSelectedConversation(existingConv);
-        } else {
-            // If not, we cannot be sure when the onSnapshot listener will fire,
-            // so we will manually check every 100ms for a short period.
-            let attempts = 0;
-            const interval = setInterval(() => {
-                const conv = conversationsRef.current.find(c => c.id === conversationId);
-                if (conv || attempts > 20) { // check for 2 seconds
-                    if(conv) {
-                        setSelectedConversation(conv);
-                    }
-                    clearInterval(interval);
-                }
-                attempts++;
-            }, 100);
-        }
-
-    } catch(error: any) {
-        console.error("Error creating or fetching conversation:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: error.message || 'Could not start the conversation.'
-        });
-    } finally {
-        setIsCreatingConversation(false);
-    }
-  };
-
-  const handleSelectConversation = async (conversation: Conversation) => {
-    setSelectedConversation(conversation);
-    if (user && conversation.unreadCounts && conversation.unreadCounts[user.uid] > 0) {
-      const { db } = getFirebaseServices();
-      if (!db) return;
-      const conversationRef = doc(db, 'conversations', conversation.id);
-      await updateDoc(conversationRef, {
-        [`unreadCounts.${user.uid}`]: 0
-      });
-    }
+  const handleSelectUser = (userToChat: AppUser) => {
+    setSelectedUser(userToChat);
   };
 
   const getLayout = () => {
     if (isMobile) {
       return (
         <div className="h-full w-full">
-          { !selectedConversation ? (
+          { !selectedUser ? (
              <UserList
                 users={users}
-                conversations={conversations}
                 onSelectUser={handleSelectUser}
-                onSelectConversation={handleSelectConversation}
-                selectedConversationId={selectedConversation?.id}
-                usersLoading={usersLoading || isCreatingConversation}
-                conversationsLoading={conversationsLoading || isCreatingConversation}
+                selectedUserId={selectedUser?.uid}
+                loading={loading}
               />
           ) : (
-             <ChatWindow
-              key={selectedConversation?.id}
-              conversation={selectedConversation}
+             <WhatsAppChatWindow
+              key={selectedUser?.uid}
+              userToChat={selectedUser}
               onBack={() => {
-                setSelectedConversation(null);
+                setSelectedUser(null);
               }}
             />
           )}
@@ -192,26 +77,23 @@ export default function CommunicationPage() {
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
            <UserList
               users={users}
-              conversations={conversations}
               onSelectUser={handleSelectUser}
-              onSelectConversation={handleSelectConversation}
-              selectedConversationId={selectedConversation?.id}
-              usersLoading={usersLoading || isCreatingConversation}
-              conversationsLoading={conversationsLoading || isCreatingConversation}
+              selectedUserId={selectedUser?.uid}
+              loading={loading}
             />
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={70}>
-           {selectedConversation ? (
-            <ChatWindow
-              key={selectedConversation?.id}
-              conversation={selectedConversation}
+           {selectedUser ? (
+            <WhatsAppChatWindow
+              key={selectedUser?.uid}
+              userToChat={selectedUser}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center bg-card text-muted-foreground">
               <MessageSquare className="h-16 w-16 mb-4" />
-              <p className="text-lg font-medium">Select a conversation or user</p>
-              <p className="text-sm">Choose from the list to start chatting.</p>
+              <p className="text-lg font-medium">Select a user to chat with</p>
+              <p className="text-sm">Choose from the list to start a WhatsApp chat.</p>
             </div>
           )}
         </ResizablePanel>

@@ -7,6 +7,7 @@ export const userRoles: UserRole[] = ['Admin', 'Sales Rep', 'Viewer', 'Structure
 export interface RolePermissions {
     navItems: {
         dashboard?: boolean;
+        communication?: boolean;
         utility?: boolean;
         tasks?: boolean;
         planner?: boolean;
@@ -23,6 +24,7 @@ export interface AppUser {
   displayName: string | null;
   role: UserRole;
   photoURL?: string | null;
+  whatsappNumber?: string | null;
   permissions?: RolePermissions;
 }
 
