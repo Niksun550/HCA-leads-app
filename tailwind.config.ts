@@ -84,10 +84,20 @@ export default {
             height: '0',
           },
         },
+        "enter": { 
+          from: { opacity: "0", transform: "scale(0.95) translateY(-10px)" },
+          to: { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        "exit": {
+          from: { opacity: "1", transform: "scale(1) translateY(0)" },
+          to: { opacity: "0", transform: "scale(0.95) translateY(-10px)" },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'enter': 'enter 0.2s ease-out',
+        'exit': 'exit 0.15s ease-in',
       },
     },
   },
