@@ -6,7 +6,7 @@ import { collection, onSnapshot, query, where, Timestamp, getDocs } from 'fireba
 import { getFirebaseServices } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, TaskPriority, TaskCategory, AppUser, Lead } from "@/types";
-import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks } from 'date-fns';
+import { addDays, format, startOfWeek, isSameDay, subWeeks, addWeeks, endOfWeek } from 'date-fns';
 
 import { LoaderCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Briefcase, DollarSign, FileText, Phone, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,21 +88,20 @@ export default function PlannerPage() {
         
         setLoading(true);
         
-        const startOfWeekDate = Timestamp.fromDate(weekDates[0]);
-        const endOfWeekDate = Timestamp.fromDate(addDays(weekDates[6], 1));
+        const startOfWeekDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const endOfWeekDate = endOfWeek(currentDate, { weekStartsOn: 1 });
 
-        let tasksQuery;
-        
-        // All users, including Admins, only see tasks assigned to them in the planner
-        tasksQuery = query(
+        const tasksQuery = query(
             collection(db, 'tasks'), 
             where('assigneeId', '==', user.uid),
-            where('dueDate', '>=', startOfWeekDate),
-            where('dueDate', '<', endOfWeekDate)
+            where('dueDate', '>=', Timestamp.fromDate(startOfWeekDate))
         );
 
         const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-            const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+            const tasksData = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Task))
+                .filter(task => task.dueDate.toDate() <= endOfWeekDate);
+                
             setTasks(tasksData);
             setLoading(false);
         }, (error) => {
@@ -111,7 +110,7 @@ export default function PlannerPage() {
         });
 
         return () => unsubscribeTasks();
-    }, [user, isAuthLoading, weekDates]);
+    }, [user, isAuthLoading, currentDate, weekDates]);
     
     const handleTaskClick = (task: Task) => {
         setSelectedTask(task);
