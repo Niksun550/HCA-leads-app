@@ -1,16 +1,15 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Share, ArrowDownToLine } from 'lucide-react';
+import { X, ArrowDownToLine } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useToast } from '@/hooks/use-toast';
 
 export function PwaInstaller() {
   const isMobile = useIsMobile();
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -25,42 +24,6 @@ export function PwaInstaller() {
       }
     }
   }, [isMobile]);
-
-  useEffect(() => {
-    const registerServiceWorker = async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          console.log('Service Worker registered with scope:', registration.scope);
-
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    // New update available
-                     toast({
-                      title: "Update Available",
-                      description: "A new version of the app is available. Please close and reopen the app to update.",
-                    });
-                  } else {
-                    // Content is cached for offline use
-                    console.log('Content is cached for offline use.');
-                  }
-                }
-              };
-            }
-          };
-        } catch (error) {
-          console.error('Service Worker registration failed:', error);
-        }
-      }
-    };
-
-    window.addEventListener('load', registerServiceWorker);
-    return () => window.removeEventListener('load', registerServiceWorker);
-  }, [toast]);
 
   const handleDismiss = () => {
     localStorage.setItem('pwaInstallBannerDismissed', 'true');
@@ -95,3 +58,5 @@ export function PwaInstaller() {
     </div>
   );
 }
+
+    

@@ -38,10 +38,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoaderCircle, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Name must be at least 2 characters."),
@@ -242,20 +243,37 @@ const ProfileSettings = () => {
                                   <div className="grid grid-cols-3 items-center gap-4">
                                       <FormLabel>Branch</FormLabel>
                                       <div className="col-span-2">
-                                          <Select onValueChange={field.onChange} value={field.value || ''}>
-                                              <FormControl>
-                                                  <SelectTrigger>
-                                                      <SelectValue placeholder="Select your branch" />
-                                                  </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                  {branches.map((branch) => (
-                                                      <SelectItem key={branch.id} value={branch.id}>
-                                                      {branch.name}
-                                                      </SelectItem>
-                                                  ))}
-                                              </SelectContent>
-                                          </Select>
+                                          <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div>
+                                                             <Select 
+                                                                onValueChange={field.onChange} 
+                                                                value={field.value || ''}
+                                                                disabled={branches.length === 0}
+                                                            >
+                                                                <FormControl>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Select your branch" />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent>
+                                                                    {branches.map((branch) => (
+                                                                        <SelectItem key={branch.id} value={branch.id}>
+                                                                        {branch.name}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    {branches.length === 0 && (
+                                                        <TooltipContent>
+                                                            <p>No branches available. Please contact an admin.</p>
+                                                        </TooltipContent>
+                                                    )}
+                                                </Tooltip>
+                                          </TooltipProvider>
                                       </div>
                                     </div>
                                     <FormMessage />
@@ -317,4 +335,3 @@ export default function SettingsPage() {
   );
 }
 
-    

@@ -15,7 +15,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'HCASolar CRM',
   description: 'A lead management tool for solar energy sales teams.',
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -45,3 +44,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
