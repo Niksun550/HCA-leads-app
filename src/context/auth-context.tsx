@@ -3,7 +3,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseServices } from "@/lib/firebase";
 import type { AppUser, RolePermissions } from "@/types";
 
@@ -63,42 +63,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        // Create a provisional user object immediately with data from Firebase Auth.
+        // This makes the UI feel much faster as we don't wait for the Firestore read.
+        const provisionalUser: AppUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: 'Viewer', // Start with a safe, default role.
+            permissions: defaultPermissions, // Use default permissions initially.
+        };
+        setUser(provisionalUser);
+        setIsLoading(false); // Stop loading, UI can now render.
+
+        // Now, listen for the detailed user profile from Firestore to get the correct role and permissions.
         const userDocRef = doc(db, "users", firebaseUser.uid);
-        
-        // Use onSnapshot to listen for real-time updates to user doc (e.g. role changes)
         const unsubUser = onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             let userData = userDoc.data() as AppUser;
             
+            // Admins always get all permissions.
             if (userData.role === 'Admin') {
                 userData.permissions = allAdminPermissions;
             } else if (!userData.permissions) {
+                // Assign default permissions if none are set.
                 userData.permissions = defaultPermissions;
             }
             
+            // Update the user state with the full, correct data from Firestore.
             setUser({
-              ...userData,
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName || userData.displayName,
-              photoURL: firebaseUser.photoURL || userData.photoURL,
+              ...provisionalUser, // Keep the core auth data
+              ...userData,        // Override with detailed profile data
             });
           } else {
              console.warn(`No user document found for UID: ${firebaseUser.uid}. This may happen during registration.`);
-             setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              role: 'Sales Rep', // Fallback role
-              photoURL: firebaseUser.photoURL,
-              permissions: defaultPermissions
-            });
+             // If doc doesn't exist, we stick with the provisional user data.
+             setUser(provisionalUser);
           }
-           setIsLoading(false);
         }, (error) => {
            console.error("Error fetching user document:", error);
            setUser(null);
-           setIsLoading(false);
         });
         
         return () => unsubUser(); // Unsubscribe from user doc listener on cleanup
