@@ -63,9 +63,9 @@ const ProfileSettings = () => {
     const form = useForm<z.infer<typeof profileFormSchema>>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
-            displayName: user?.displayName || "",
-            whatsappNumber: user?.whatsappNumber || "",
-            branchId: user?.branchId || "",
+            displayName: "",
+            whatsappNumber: "",
+            branchId: "",
         },
     });
 
@@ -87,7 +87,7 @@ const ProfileSettings = () => {
               branchId: user.branchId || "",
             });
         }
-    }, [user, form]);
+    }, [user, form, isOpen]);
     
     if (isAuthLoading || !user) {
         return <Skeleton className="h-96 w-full" />
