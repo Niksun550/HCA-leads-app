@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, setDoc, onSnapshot, addDoc, deleteDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useAuth } from '@/hooks/use-auth';
-import type { AppUser, UserRole, RolePermissions } from '@/types';
+import type { AppUser, UserRole, RolePermissions, Branch } from '@/types';
 import { userRoles } from '@/types';
 
 import {
@@ -66,7 +66,7 @@ import { Progress } from "@/components/ui/progress";
 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoaderCircle, MoreHorizontal, Trash2, Edit, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { LoaderCircle, MoreHorizontal, Trash2, Edit, UploadCloud, PlusCircle } from 'lucide-react';
 import Image from "next/image";
 
 const allNavItems = [
@@ -91,17 +91,19 @@ const AdminPage = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     
-    // State for permissions dialog
     const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AppUser | null>(null);
     const [userPermissions, setUserPermissions] = useState<RolePermissions['navItems']>({});
     const [isSavingPermissions, setIsSavingPermissions] = useState(false);
     
-    // State for logo upload
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [newBranchName, setNewBranchName] = useState("");
+    const [isAddingBranch, setIsAddingBranch] = useState(false);
 
 
     useEffect(() => {
@@ -110,6 +112,13 @@ const AdminPage = () => {
                 router.replace('/dashboard');
             } else {
                 fetchUsers();
+                const { db } = getFirebaseServices();
+                if (!db) return;
+                const unsubscribeBranches = onSnapshot(collection(db, 'branches'), (snapshot) => {
+                    const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+                    setBranches(branchesData);
+                });
+                return () => unsubscribeBranches();
             }
         }
     }, [user, isAuthLoading, router]);
@@ -290,9 +299,34 @@ const AdminPage = () => {
                 } finally {
                     setIsUploadingLogo(false);
                     setUploadProgress(null);
+                    setLogoFile(null);
+                    setLogoPreview(null);
                 }
             }
         );
+    };
+
+    const handleAddBranch = async () => {
+        if (!newBranchName.trim()) {
+            toast({ variant: 'destructive', title: 'Branch name cannot be empty.' });
+            return;
+        }
+        setIsAddingBranch(true);
+        const { db } = getFirebaseServices();
+        if (!db) {
+             toast({ variant: 'destructive', title: 'Database not available.' });
+             setIsAddingBranch(false);
+             return;
+        }
+        try {
+            await addDoc(collection(db, "branches"), { name: newBranchName.trim() });
+            toast({ title: 'Branch Added', description: `"${newBranchName.trim()}" has been added.` });
+            setNewBranchName("");
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not add branch.' });
+        } finally {
+            setIsAddingBranch(false);
+        }
     };
     
     if (isAuthLoading || loading || !user) {
@@ -323,7 +357,8 @@ const AdminPage = () => {
                                 <TableHeader>
                                     <TableRow>
                                     <TableHead>User</TableHead>
-                                    <TableHead className="w-[200px]">Role</TableHead>
+                                    <TableHead className="w-[150px]">Role</TableHead>
+                                    <TableHead className="w-[150px] hidden md:table-cell">Branch</TableHead>
                                     <TableHead className="text-right w-[100px]">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -338,7 +373,7 @@ const AdminPage = () => {
                                         <Select
                                             value={u.role}
                                             onValueChange={(newRole: UserRole) => handleRoleChange(u.uid, newRole)}
-                                            disabled={user?.uid === u.uid} // Admin cannot change their own role
+                                            disabled={user?.uid === u.uid}
                                         >
                                             <SelectTrigger>
                                             <SelectValue />
@@ -351,6 +386,9 @@ const AdminPage = () => {
                                             ))}
                                             </SelectContent>
                                         </Select>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {u.branchName || <span className="text-muted-foreground">Not Set</span>}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
@@ -383,7 +421,7 @@ const AdminPage = () => {
                         </CardContent>
                     </Card>
                 </div>
-                <div>
+                <div className="space-y-8">
                      <Card>
                         <CardHeader>
                             <CardTitle>Branding</CardTitle>
@@ -408,6 +446,34 @@ const AdminPage = () => {
                                 {isUploadingLogo ? <LoaderCircle className="mr-2 animate-spin" /> : <UploadCloud className="mr-2"/>}
                                 Upload Logo
                             </Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Branch Management</CardTitle>
+                            <CardDescription>Add or remove office branches.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Input 
+                                    placeholder="Enter new branch name..." 
+                                    value={newBranchName}
+                                    onChange={(e) => setNewBranchName(e.target.value)}
+                                />
+                                <Button onClick={handleAddBranch} disabled={isAddingBranch || !newBranchName.trim()}>
+                                    {isAddingBranch ? <LoaderCircle className="animate-spin" /> : <PlusCircle />}
+                                </Button>
+                            </div>
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                {branches.length > 0 ? branches.map(branch => (
+                                    <div key={branch.id} className="text-sm p-2 rounded-md bg-muted flex items-center justify-between">
+                                        {branch.name}
+                                    </div>
+                                )) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">No branches added yet.</p>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

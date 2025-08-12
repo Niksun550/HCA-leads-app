@@ -26,6 +26,13 @@ export interface AppUser {
   photoURL?: string | null;
   whatsappNumber?: string | null;
   permissions?: RolePermissions;
+  branchId?: string | null;
+  branchName?: string | null;
+}
+
+export interface Branch {
+    id: string;
+    name: string;
 }
 
 

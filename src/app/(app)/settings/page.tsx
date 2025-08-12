@@ -10,7 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile, sendPasswordResetEmail } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, collection } from "firebase/firestore";
+import type { Branch } from '@/types';
 
 import {
   Card,
@@ -30,6 +31,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,30 +48,43 @@ const profileFormSchema = z.object({
   whatsappNumber: z.string().optional().refine(val => !val || /^\d+$/.test(val), {
     message: "WhatsApp number must contain only digits.",
   }),
+  branchId: z.string().optional().nullable(),
 });
 
 const ProfileSettings = () => {
     const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
-    const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isSendingEmail, setIsSendingEmail] = useState(false);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<z.infer<typeof profileFormSchema>>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
             displayName: user?.displayName || "",
-            whatsappNumber: user?.whatsappNumber || ""
+            whatsappNumber: user?.whatsappNumber || "",
+            branchId: user?.branchId || "",
         },
     });
+
+    useEffect(() => {
+        const { db } = getFirebaseServices();
+        if(!db) return;
+        const unsubscribeBranches = onSnapshot(collection(db, 'branches'), (snapshot) => {
+            const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+            setBranches(branchesData);
+        });
+        return () => unsubscribeBranches();
+    }, []);
 
     useEffect(() => {
         if (user) {
             form.reset({ 
               displayName: user.displayName || "",
               whatsappNumber: user.whatsappNumber || "",
+              branchId: user.branchId || "",
             });
         }
     }, [user, form]);
@@ -78,6 +99,8 @@ const ProfileSettings = () => {
         if (!auth.currentUser || !db) return;
 
         try {
+            const selectedBranch = branches.find(b => b.id === values.branchId);
+
             // Update Auth profile
             await updateProfile(auth.currentUser, { displayName: values.displayName });
             
@@ -86,6 +109,8 @@ const ProfileSettings = () => {
             await updateDoc(userDocRef, { 
                 displayName: values.displayName,
                 whatsappNumber: values.whatsappNumber || null,
+                branchId: selectedBranch?.id || null,
+                branchName: selectedBranch?.name || null,
             });
 
             toast({ title: "Success", description: "Profile updated successfully." });
@@ -205,6 +230,31 @@ const ProfileSettings = () => {
                                     <FormControl>
                                         <Input {...field} placeholder="e.g. 919876543210" />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="branchId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Branch</FormLabel>
+                                     <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select your branch" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {branches.map((branch) => (
+                                                <SelectItem key={branch.id} value={branch.id}>
+                                                {branch.name}
+                                                </SelectItem>
+                                            ))}
+                                            {branches.length === 0 && <SelectItem value="" disabled>No branches available</SelectItem>}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
