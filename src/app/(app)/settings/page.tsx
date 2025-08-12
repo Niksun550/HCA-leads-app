@@ -45,7 +45,7 @@ import { LoaderCircle, Upload } from 'lucide-react';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Name must be at least 2 characters."),
-  whatsappNumber: z.string().optional().refine(val => !val || /^\d+$/.test(val), {
+  whatsappNumber: z.string().optional().refine(val => !val || /^\d+$/.test(val) || val === "", {
     message: "WhatsApp number must contain only digits.",
   }),
   branchId: z.string().optional().nullable(),
@@ -65,7 +65,7 @@ const ProfileSettings = () => {
         defaultValues: {
             displayName: "",
             whatsappNumber: "",
-            branchId: "",
+            branchId: null,
         },
     });
 
@@ -84,10 +84,10 @@ const ProfileSettings = () => {
             form.reset({ 
               displayName: user.displayName || "",
               whatsappNumber: user.whatsappNumber || "",
-              branchId: user.branchId || "",
+              branchId: user.branchId || null,
             });
         }
-    }, [user, form, isOpen]);
+    }, [user, form]);
     
     if (isAuthLoading || !user) {
         return <Skeleton className="h-96 w-full" />
@@ -172,7 +172,7 @@ const ProfileSettings = () => {
     
     const getInitials = (name: string | null | undefined) => {
         if (!name) return "U";
-        return name.split(' ').map(n => n[0]).join('');
+        return name.split(' ').map(n => n[0]).join('').toUpperCase();
     };
 
     return (
@@ -296,7 +296,7 @@ export default function SettingsPage() {
 
   if (isAuthLoading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex h-[calc(100vh-theme(spacing.16))] w-full items-center justify-center bg-background">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
