@@ -4,82 +4,89 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
+    // Helper functions
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to get the user's role from the users collection
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
     
-    // Helper function to check if the user is an Admin
-    function isAdmin() {
-      return isAuthenticated() && getRole() == 'Admin';
+    function getUserRole() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Secure the users collection
+    function isAdmin() {
+      return isSignedIn() && getUserRole() == 'Admin';
+    }
+    
+    function isSalesOrAdmin() {
+        let role = getUserRole();
+        return isSignedIn() && (role == 'Admin' || role == 'Sales Rep');
+    }
+
+    // Users collection
     match /users/{userId} {
       // Admins can read/write any user document
-      // Users can read/write their own document
-      allow read, write: if isAdmin() || request.auth.uid == userId;
-      // Authenticated users can list all users to enable communication features
-      allow list: if isAuthenticated();
+      // Users can read their own document
+      // Users can update their own document
+      allow read, update: if isAdmin() || isUser(userId);
+      // Only admins can create or delete users (creation happens on backend, deletion via cloud function)
+      allow create, delete: if isAdmin();
     }
-    
-    // Secure the leads collection
+
+    // Leads collection
     match /leads/{leadId} {
-        // Admins, Directors, and Viewers can read any lead
-        allow read: if isAuthenticated() && (getRole() in ['Admin', 'Director', 'Viewer']);
-        // Sales Reps can read leads they own
-        allow read: if isAuthenticated() && getRole() == 'Sales Rep' && resource.data.ownerId == request.auth.uid;
-        // Structure team can read leads assigned to them or in their workflow
-        allow read: if isAuthenticated() && getRole() == 'Structure' && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status in ['Structure Pending', 'Site Visit Done', 'IN Design', 'Quotation Send']);
-        
-        // Admins and Directors can write to any lead
-        allow write: if isAuthenticated() && getRole() in ['Admin', 'Director'];
-        // Sales Reps can write to leads they own
-        allow write: if isAuthenticated() && getRole() == 'Sales Rep' && resource.data.ownerId == request.auth.uid;
-        // Structure team can write to leads assigned to them
-        allow write: if isAuthenticated() && getRole() == 'Structure' && resource.data.structureTeamMemberId == request.auth.uid;
-        
-        // Allow creating a lead if the user is authenticated and not a viewer
-        allow create: if isAuthenticated() && getRole() != 'Viewer';
-        
-        // Allow authenticated users to list leads to populate the dashboard
-        allow list: if isAuthenticated();
-    }
-
-    // Secure the tasks collection
-    match /tasks/{taskId} {
-      // Users can read/write tasks assigned to them
-      allow read, write: if isAuthenticated() && resource.data.assigneeId == request.auth.uid;
-      // Users can create tasks
-      allow create: if isAuthenticated();
-      // Users can delete tasks they created, or Admins can delete any task
-      allow delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || getRole() == 'Admin');
-      // Allow authenticated users to list tasks
-      allow list: if isAuthenticated();
-    }
-
-    // Secure conversations
-    match /conversations/{conversationId} {
-      // Only participants can read/write the conversation document
-      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Admins and Directors can read/write all leads.
+      // Sales Reps can read/write leads they own.
+      // Structure team can read/write leads assigned to them or in a structure status.
+      // Viewers can read all leads.
+      allow read: if isSignedIn() && 
+                    (
+                      getUserRole() in ['Admin', 'Director', 'Viewer'] || 
+                      (getUserRole() == 'Sales Rep' && resource.data.ownerId == request.auth.uid) ||
+                      (getUserRole() == 'Structure' && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']))
+                    );
       
-      // Secure messages subcollection
-      match /messages/{messageId} {
-         // Only participants can read/write messages
-        allow read, write: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-      }
+      allow create, update: if isSignedIn() && 
+                    (
+                      getUserRole() in ['Admin', 'Director', 'Sales Rep'] ||
+                      (getUserRole() == 'Structure' && (resource.data.structureTeamMemberId == request.auth.uid || resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']))
+                    );
+
+      // Only Admins can delete leads.
+      allow delete: if isAdmin();
+    }
+
+    // Tasks collection
+    match /tasks/{taskId} {
+      // Users can read/write tasks assigned to them.
+      // Admins can read/write any task.
+      allow read, create, update: if isSignedIn() && (isAdmin() || resource.data.assigneeId == request.auth.uid);
+      // Only the creator or an admin can delete a task.
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.createdBy == request.auth.uid);
     }
     
-    // Secure settings collection (for branding)
-    match /settings/{settingId} {
-        // Anyone can read branding settings
-        allow read: if true;
-        // Only Admins can write to settings
+    // Conversations collection
+    match /conversations/{conversationId} {
+        // Only participants of the conversation can read/write
+        allow read, write: if isSignedIn() && request.auth.uid in resource.data.participants;
+    }
+
+    // Settings collection
+    match /settings/{docId} {
+      // All authenticated users can read settings (like branding logo).
+      // Only Admins can write to settings.
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Branches collection
+    match /branches/{branchId} {
+        // All authenticated users can read branches (for dropdowns).
+        // Only Admins can create/update/delete branches.
+        allow read: if isSignedIn();
         allow write: if isAdmin();
     }
   }
