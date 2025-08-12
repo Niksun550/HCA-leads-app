@@ -81,6 +81,13 @@ const allNavItems = [
     { id: 'admin', label: 'Admin' },
 ];
 
+const defaultBranches = [
+    "Solapur Main",
+    "Akkalkot",
+    "Barshi",
+    "Kalaburagi"
+];
+
 const AdminPage = () => {
     const { user, isLoading: isAuthLoading } = useAuth();
     const router = useRouter();
@@ -104,6 +111,7 @@ const AdminPage = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [newBranchName, setNewBranchName] = useState("");
     const [isAddingBranch, setIsAddingBranch] = useState(false);
+    const [addingBranchName, setAddingBranchName] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -306,26 +314,29 @@ const AdminPage = () => {
         );
     };
 
-    const handleAddBranch = async () => {
-        if (!newBranchName.trim()) {
+    const handleAddBranch = async (branchName: string) => {
+        if (!branchName.trim()) {
             toast({ variant: 'destructive', title: 'Branch name cannot be empty.' });
             return;
         }
+        setAddingBranchName(branchName);
         setIsAddingBranch(true);
         const { db } = getFirebaseServices();
         if (!db) {
              toast({ variant: 'destructive', title: 'Database not available.' });
              setIsAddingBranch(false);
+             setAddingBranchName(null);
              return;
         }
         try {
-            await addDoc(collection(db, "branches"), { name: newBranchName.trim() });
-            toast({ title: 'Branch Added', description: `"${newBranchName.trim()}" has been added.` });
+            await addDoc(collection(db, "branches"), { name: branchName.trim() });
+            toast({ title: 'Branch Added', description: `"${branchName.trim()}" has been added.` });
             setNewBranchName("");
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not add branch.' });
         } finally {
             setIsAddingBranch(false);
+            setAddingBranchName(null);
         }
     };
     
@@ -336,6 +347,9 @@ const AdminPage = () => {
             </div>
         );
     }
+    
+    const existingBranchNames = branches.map(b => b.name);
+    const suggestedBranches = defaultBranches.filter(b => !existingBranchNames.includes(b));
     
     return (
         <div className="py-4 space-y-8">
@@ -455,17 +469,37 @@ const AdminPage = () => {
                             <CardDescription>Add or remove office branches.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center gap-2">
+                            <form onSubmit={(e) => { e.preventDefault(); handleAddBranch(newBranchName); }} className="flex items-center gap-2">
                                 <Input 
                                     placeholder="Enter new branch name..." 
                                     value={newBranchName}
                                     onChange={(e) => setNewBranchName(e.target.value)}
                                 />
-                                <Button onClick={handleAddBranch} disabled={isAddingBranch || !newBranchName.trim()}>
-                                    {isAddingBranch ? <LoaderCircle className="animate-spin" /> : <PlusCircle />}
+                                <Button type="submit" disabled={isAddingBranch || !newBranchName.trim()}>
+                                    {isAddingBranch && addingBranchName === newBranchName ? <LoaderCircle className="animate-spin" /> : <PlusCircle />}
                                 </Button>
-                            </div>
+                            </form>
+                             {suggestedBranches.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium text-muted-foreground">Suggested Branches</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {suggestedBranches.map(branchName => (
+                                            <Button
+                                                key={branchName}
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleAddBranch(branchName)}
+                                                disabled={isAddingBranch}
+                                            >
+                                                {isAddingBranch && addingBranchName === branchName ? <LoaderCircle className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                                                {branchName}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                <p className="text-sm font-medium text-muted-foreground">Existing Branches</p>
                                 {branches.length > 0 ? branches.map(branch => (
                                     <div key={branch.id} className="text-sm p-2 rounded-md bg-muted flex items-center justify-between">
                                         {branch.name}
@@ -538,3 +572,5 @@ const AdminPage = () => {
 }
 
 export default AdminPage;
+
+    
