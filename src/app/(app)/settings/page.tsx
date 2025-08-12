@@ -252,7 +252,6 @@ const ProfileSettings = () => {
                                                 {branch.name}
                                                 </SelectItem>
                                             ))}
-                                            {branches.length === 0 && <SelectItem value="" disabled>No branches available</SelectItem>}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
