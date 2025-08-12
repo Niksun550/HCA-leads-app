@@ -239,21 +239,25 @@ const ProfileSettings = () => {
                             name="branchId"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Branch</FormLabel>
-                                     <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select your branch" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {branches.map((branch) => (
-                                                <SelectItem key={branch.id} value={branch.id}>
-                                                {branch.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                  <div className="grid grid-cols-3 items-center gap-4">
+                                      <FormLabel>Branch</FormLabel>
+                                      <div className="col-span-2">
+                                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                                              <FormControl>
+                                                  <SelectTrigger>
+                                                      <SelectValue placeholder="Select your branch" />
+                                                  </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                  {branches.map((branch) => (
+                                                      <SelectItem key={branch.id} value={branch.id}>
+                                                      {branch.name}
+                                                      </SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                          </Select>
+                                      </div>
+                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )}
