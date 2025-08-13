@@ -5,9 +5,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import type { Lead, LeadStatus, AppUser } from '@/types';
+import type { Lead, LeadStatus, AppUser, Branch } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles, User as UserIcon, TrendingUp } from 'lucide-react';
+import { PlusCircle, ListFilter, FileSpreadsheet, LoaderCircle, Sparkles, User as UserIcon, TrendingUp, Building } from 'lucide-react';
 import { StatCards } from '@/components/dashboard/stat-cards';
 import { LeadsTable } from '@/components/dashboard/leads-table';
 import LeadForm from '@/components/dashboard/lead-form';
@@ -43,10 +43,14 @@ export default function DashboardPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [statusFilters, setStatusFilters] = useState<Record<LeadStatus, boolean>>({});
+  
+  // New state for advanced filtering
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [selectedUserId, setSelectedUserId] = useState<string>('all');
 
 
@@ -84,6 +88,12 @@ export default function DashboardPage() {
     const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
         const usersData = snapshot.docs.map(doc => doc.data() as AppUser);
         setAllUsers(usersData);
+    });
+
+    const branchesCollection = collection(db, 'branches');
+    const unsubscribeBranches = onSnapshot(branchesCollection, (snapshot) => {
+        const branchesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+        setAllBranches(branchesData);
     });
     
     let unsubscribeLeads: () => void = () => {};
@@ -151,6 +161,7 @@ export default function DashboardPage() {
 
     return () => {
         unsubscribeUsers();
+        unsubscribeBranches();
         if (unsubscribeLeads) {
             unsubscribeLeads();
         }
@@ -168,18 +179,46 @@ export default function DashboardPage() {
     setIsFormOpen(true);
   };
   
+  const usersInSelectedBranch = useMemo(() => {
+    if (selectedBranchId === 'all') {
+      return allUsers;
+    }
+    return allUsers.filter(u => u.branchId === selectedBranchId);
+  }, [allUsers, selectedBranchId]);
+
+  const handleBranchChange = (branchId: string) => {
+    setSelectedBranchId(branchId);
+    setSelectedUserId('all'); // Reset user filter when branch changes
+  };
+
   const filteredLeads = useMemo(() => {
-    const activeFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
-    if (activeFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
+    let leadsToFilter = [...leads];
 
-    let statusFilteredLeads = leads.filter(lead => statusFilters[lead.status]);
-
-    if ((user?.role === 'Director' || user?.role === 'Admin') && selectedUserId !== 'all') {
-        statusFilteredLeads = statusFilteredLeads.filter(lead => lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId);
+    // Director/Admin filtering logic
+    if (user?.role === 'Director' || user?.role === 'Admin') {
+      // 1. Filter by branch
+      if (selectedBranchId !== 'all') {
+        const userIdsInBranch = usersInSelectedBranch.map(u => u.uid);
+        leadsToFilter = leadsToFilter.filter(lead => 
+            userIdsInBranch.includes(lead.ownerId) || userIdsInBranch.includes(lead.structureTeamMemberId || '')
+        );
+      }
+      
+      // 2. Filter by user (within the selected branch context)
+      if (selectedUserId !== 'all') {
+        leadsToFilter = leadsToFilter.filter(lead => 
+            lead.ownerId === selectedUserId || lead.structureTeamMemberId === selectedUserId
+        );
+      }
     }
     
-    return statusFilteredLeads;
-  }, [leads, statusFilters, user, selectedUserId]);
+    // 3. Filter by status
+    const activeStatusFilters = Object.keys(statusFilters).filter(status => statusFilters[status as LeadStatus]);
+    if (activeStatusFilters.length === 0 || Object.keys(statusFilters).length === 0) return [];
+    
+    return leadsToFilter.filter(lead => statusFilters[lead.status]);
+  }, [leads, statusFilters, user, selectedBranchId, selectedUserId, usersInSelectedBranch]);
+
 
   const handleExport = () => {
     const dataToExport = filteredLeads.map(lead => ({
@@ -236,18 +275,32 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
            {isDirectorOrAdmin && (
-             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    {allUsers.map(u => (
-                        <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>
-                    ))}
-                </SelectContent>
-             </Select>
+             <>
+                <Select value={selectedBranchId} onValueChange={handleBranchChange}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <Building className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {allBranches.map(b => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <UserIcon className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Users in Branch</SelectItem>
+                        {usersInSelectedBranch.map(u => (
+                            <SelectItem key={u.uid} value={u.uid}>{u.displayName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+             </>
            )}
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -358,3 +411,5 @@ const ForecastingDashboard = ({ leads }: { leads: Lead[] }) => (
         <p className="text-muted-foreground">This is a placeholder for the forecasting dashboard.</p>
     </div>
 );
+
+    
