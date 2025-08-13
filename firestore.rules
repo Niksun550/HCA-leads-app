@@ -2,79 +2,91 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAuth() {
-      return request.auth != null;
-    }
-    
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+
+    // Function to get the requesting user's role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    function isOneOfRoles(roles) {
-      return isAuth() && getRole() in roles;
+    // Function to check if a user is an Admin or Director
+    function isAdminOrDirector(userId) {
+      let role = getUserRole(userId);
+      return role == 'Admin' || role == 'Director';
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
+    // USERS
     match /users/{userId} {
-      // Any authenticated user can read user profiles (for names, roles, etc.)
-      // Only the user themselves or an Admin can modify the profile.
-      allow read: if isAuth();
-      allow write: if isOwner(userId) || isOneOfRoles(['Admin']);
-    }
-    
-    match /branches/{branchId} {
-      // Any authenticated user can read the list of branches.
-      // Only an Admin can create or modify branches.
-      allow read: if isAuth();
-      allow create, update, delete: if isOneOfRoles(['Admin']);
-    }
-    
-    match /settings/branding {
-      // Any authenticated user can read branding settings (like the logo).
-      // Only an Admin can change branding.
-      allow read: if isAuth();
-      allow write: if isOneOfRoles(['Admin']);
+      // Anyone authenticated can read user profiles (for dropdowns, names, etc.)
+      allow read: if request.auth != null;
+      // Users can update their own profile. Admins can update any profile.
+      allow write: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'Admin';
     }
 
+    // BRANCHES
+    match /branches/{branchId} {
+      // Anyone authenticated can read branch lists.
+      allow read: if request.auth != null;
+      // Only Admins can create/update branches.
+      allow write: if getUserRole(request.auth.uid) == 'Admin';
+    }
+
+    // LEADS
     match /leads/{leadId} {
-      // Complex read logic:
-      // - Admins, Viewers, Directors can see everything.
-      // - A user can see a lead if they are the owner OR the assigned structure team member.
-      // - A structure member can see any lead that has a status relevant to them.
-      allow read: if isAuth() && 
-                    (isOneOfRoles(['Admin', 'Viewer', 'Director']) || 
-                    resource.data.ownerId == request.auth.uid ||
-                    resource.data.structureTeamMemberId == request.auth.uid ||
-                    (isOneOfRoles(['Structure']) && resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending']));
-      
-      // Creating a lead is restricted to sales-related roles.
-      allow create: if isAuth() && isOneOfRoles(['Admin', 'Sales Rep', 'Director']);
-      
-      // Updating a lead is allowed for owners, assigned members, or high-level roles.
-      allow update: if isAuth() && (isOneOfRoles(['Admin', 'Director']) || resource.data.ownerId == request.auth.uid || resource.data.structureTeamMemberId == request.auth.uid);
+      // Admins and Directors can read any lead.
+      // Others can read if they are the owner, assignee, or a viewer.
+      allow read: if isAdminOrDirector(request.auth.uid)
+                  || request.auth.uid == resource.data.ownerId
+                  || request.auth.uid == resource.data.structureTeamMemberId
+                  || getUserRole(request.auth.uid) == 'Viewer';
+                  
+      // Any authenticated user can create a lead, as long as they set themselves as owner.
+      allow create: if request.auth.uid != null && request.resource.data.ownerId == request.auth.uid;
+
+      // Admins and Directors can update any lead.
+      // Others can update if they are the owner or the assigned structure team member.
+      allow update: if isAdminOrDirector(request.auth.uid)
+                    || request.auth.uid == resource.data.ownerId
+                    || request.auth.uid == resource.data.structureTeamMemberId;
       
       // Only Admins can delete leads.
-      allow delete: if isOneOfRoles(['Admin']);
-    }
-
-    match /tasks/{taskId} {
-       // A user can read a task if they are assigned to it.
-       // Admins/Directors can read all tasks.
-       allow read: if isAuth() && (resource.data.assigneeId == request.auth.uid || isOneOfRoles(['Admin', 'Director']));
-       
-       // Any authenticated user can create a task (e.g., for themselves or others).
-       allow create: if isAuth();
-       
-       // The assignee, creator, or an Admin/Director can update a task.
-       allow update: if isAuth() && (resource.data.assigneeId == request.auth.uid || resource.data.createdBy == request.auth.uid || isOneOfRoles(['Admin', 'Director']));
-       
-       // The creator or an Admin can delete a task.
-       allow delete: if isAuth() && (resource.data.createdBy == request.auth.uid || isOneOfRoles(['Admin']));
+      allow delete: if getUserRole(request.auth.uid) == 'Admin';
     }
     
+    // TASKS
+    match /tasks/{taskId} {
+       // Admins and Directors can read any task.
+       // Others can read if they created it or are assigned to it.
+      allow read: if isAdminOrDirector(request.auth.uid)
+                  || request.auth.uid == resource.data.createdBy
+                  || request.auth.uid == resource.data.assigneeId;
+
+      // Any authenticated user can create a task.
+      allow create: if request.auth.uid != null;
+      
+      // Admins and Directors can update any task.
+      // Others can update if they created it or are assigned to it.
+      allow update: if isAdminOrDirector(request.auth.uid)
+                    || request.auth.uid == resource.data.createdBy
+                    || request.auth.uid == resource.data.assigneeId;
+
+      // Admins and Directors can delete any task.
+      // Others can delete if they created it.
+      allow delete: if isAdminOrDirector(request.auth.uid)
+                    || request.auth.uid == resource.data.createdBy;
+    }
+
+    // SETTINGS
+    match /settings/branding {
+        // All authenticated users can read branding settings (like the logo).
+        allow read: if request.auth != null;
+        // Only Admins can change branding.
+        allow write: if getUserRole(request.auth.uid) == 'Admin';
+    }
+
+    // CONVERSATIONS
+    match /conversations/{conversationId} {
+        // Only participants of a conversation can read or write to it.
+        allow read, write: if request.auth.uid in resource.data.participants;
+    }
   }
 }
