@@ -46,10 +46,10 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
         <CardContent className="flex-grow flex items-center justify-center">
           <Alert variant="destructive" className="w-full">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Configuration Error</AlertTitle>
+              <AlertTitle>Google Maps Configuration Error</AlertTitle>
               <AlertDescription>
-                Google Maps API key is not configured. Please add your key to a 
-                 <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file to display the map.
+                The Google Maps API key is either missing or invalid. Please add your key to a 
+                 <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file and ensure it is enabled in the Google Cloud Console.
                  <Link href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" className="block text-xs underline mt-2">
                     Get your API Key from Google Cloud Console
                  </Link>
