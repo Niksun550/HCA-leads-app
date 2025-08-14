@@ -240,7 +240,7 @@ const ProfileSettings = () => {
                             name="branchId"
                             render={({ field }) => (
                                 <FormItem>
-                                  <div className="grid grid-cols-3 items-center gap-4">
+                                  <div className="grid grid-cols-1 items-center gap-4">
                                       <FormLabel>Branch</FormLabel>
                                       <div className="col-span-2">
                                           <TooltipProvider>
@@ -334,4 +334,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
