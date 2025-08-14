@@ -2,56 +2,52 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check for Admin or Director roles
-    function isDirectorOrAdmin() {
-      return request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Director'];
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isUserId(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+    function userRole() {
+      // Use exists() to prevent errors on new user creation before their doc exists.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : '';
+    }
+    function isAdmin() {
+      return isAuth() && userRole() == 'Admin';
     }
 
-    // Users can read other user profiles (for names, etc.) but can only write to their own.
+    // Rules
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
+      // Allow any authenticated user to read user profiles.
+      // This is needed for features like assignee dropdowns, chat, etc.
+      allow read: if isAuth();
+      // Only the user themselves or an admin can write to their profile.
+      allow write: if isUserId(userId) || isAdmin();
     }
 
-    // Branch data is public to all authenticated users. Only Admins can modify.
-    match /branches/{branchId} {
-        allow read: if request.auth != null;
-        allow write: if isDirectorOrAdmin();
+    match /settings/branding {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     
-    // Settings can be read by anyone, but only changed by an Admin
-    match /settings/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isDirectorOrAdmin();
+    match /branches/{branchId} {
+        allow read: if isAuth();
+        allow write: if isAdmin();
     }
-
-    // Leads can be accessed based on roles.
+    
     match /leads/{leadId} {
-      // Admins and Directors have full access
-      allow read, write: if isDirectorOrAdmin();
-      
-      // Sales Reps can read/write their own leads.
-      allow read, write: if request.auth.uid == resource.data.ownerId;
-      
-      // Structure team can read/write leads assigned to them.
-      allow read, write: if request.auth.uid == resource.data.structureTeamMemberId;
-
-      // Structure team can also read leads that are in a pending state for them.
-      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Structure'
-                  && resource.data.status in ['Site Visit Done', 'IN Design', 'Quotation Send', 'Structure Pending'];
-                  
-      // Viewers can read all leads.
-      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Viewer';
+      allow read, write: if isAuth();
     }
 
-    // Tasks can be accessed based on roles.
     match /tasks/{taskId} {
-       // Admins and Directors have full access
-      allow read, write: if isDirectorOrAdmin();
-      
-      // Users can read/write tasks assigned to them or created by them.
-      allow read, write: if request.auth.uid == resource.data.assigneeId || request.auth.uid == resource.data.createdBy;
+      allow read, write: if isAuth();
+    }
+    
+    match /conversations/{conversationId} {
+      allow read, write: if isAuth() && request.auth.uid in resource.data.participants;
     }
   }
 }
