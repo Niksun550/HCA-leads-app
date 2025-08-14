@@ -249,7 +249,7 @@ const ProfileSettings = () => {
                                                         <div>
                                                              <Select 
                                                                 onValueChange={field.onChange} 
-                                                                value={field.value || ''}
+                                                                value={field.value || ""}
                                                                 disabled={branches.length === 0}
                                                             >
                                                                 <FormControl>
