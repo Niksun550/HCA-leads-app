@@ -85,8 +85,8 @@ export default {
           },
         },
         "enter": { 
-          from: { opacity: "0", transform: "scale(0.95)" },
-          to: { opacity: "1", transform: "scale(1)" },
+          from: { opacity: "0.8", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
         "exit": {
           from: { opacity: "1", transform: "scale(1)" },
@@ -96,7 +96,7 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'enter': 'enter 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        'enter': 'enter 0.2s ease-out',
         'exit': 'exit 0.15s ease-in',
       },
     },

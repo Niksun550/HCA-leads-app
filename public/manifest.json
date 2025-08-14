@@ -1,2 +1,22 @@
-
-    
+{
+  "name": "HCASolar CRM",
+  "short_name": "HCASolar",
+  "description": "A lead management tool for solar energy sales teams.",
+  "icons": [
+    {
+      "src": "/api/logo?size=192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/api/logo?size=512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#F8F8F8",
+  "background_color": "#F8F8F8",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}

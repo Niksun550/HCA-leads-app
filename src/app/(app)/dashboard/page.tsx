@@ -38,6 +38,11 @@ const ClientLeadsChart = dynamic(() => import('@/components/dashboard/client-lea
   loading: () => <div className="h-[350px] w-full flex items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
 });
 
+const ForecastingDashboard = dynamic(() => import('@/components/dashboard/forecasting-dashboard').then(mod => mod.ForecastingDashboard), {
+  ssr: false,
+  loading: () => <div className="h-[350px] w-full flex items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
+});
+
 
 export default function DashboardPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -405,11 +410,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-const ForecastingDashboard = ({ leads }: { leads: Lead[] }) => (
-    <div className="space-y-8">
-        <p className="text-muted-foreground">This is a placeholder for the forecasting dashboard.</p>
-    </div>
-);
-
-    
