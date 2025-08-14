@@ -68,7 +68,7 @@ const SidebarContent = ({ onLinkClick, logoUrl }: { onLinkClick?: () => void, lo
             <div className="flex h-16 shrink-0 items-center border-b px-6">
               <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                 {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain" /> : <HcaLogo className="h-8 w-8" />}
-                <span className="font-headline text-lg">HCASolar CRM</span>
+                <span className="font-headline text-lg">HCASolar</span>
               </Link>
             </div>
             <nav className="flex-1 flex flex-col gap-2 p-4">
@@ -298,7 +298,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             {logoUrl ? <Image src={logoUrl} alt="App Logo" width={32} height={32} className="h-8 w-8 object-contain"/> : <HcaLogo className="h-8 w-8" />}
-            <span className="font-headline text-lg">HCASolar CRM</span>
+            <span className="font-headline text-lg">HCASolar</span>
           </Link>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-8 pb-20 sm:pb-8">
