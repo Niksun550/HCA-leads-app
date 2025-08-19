@@ -126,3 +126,26 @@ exports.createConversation = functions.https.onCall(async (data, context) => {
         );
     }
 });
+
+exports.generateImageForPWA = functions.runWith({ invoker: 'public' }).https.onRequest(async (req, res) => {
+    cors(req, res, async () => {
+      try {
+        const size = req.query.size === '512' ? 512 : 192;
+        const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/hca-crm.appspot.com/o/branding%2Flogo?alt=media&token=eb534335-a745-41f2-95f7-41a64f169f4c';
+        
+        const response = await fetch(logoUrl);
+        if (!response.ok) {
+            throw new Error('Failed to fetch logo image');
+        }
+        const imageBuffer = await response.arrayBuffer();
+
+        res.set('Content-Type', 'image/png');
+        res.set('Cache-Control', 'public, max-age=31536000, immutable');
+        res.status(200).send(Buffer.from(imageBuffer));
+
+      } catch (error) {
+        console.error('Error generating PWA image:', error);
+        res.status(500).send('Error generating image');
+      }
+    });
+});
