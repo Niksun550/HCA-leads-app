@@ -47,7 +47,6 @@ const reengageLeadFlow = ai.defineFlow(
     `;
     
     const { output } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash', // Use a model that supports structured output
       prompt: prompt,
       output: {
         schema: ReengageLeadOutputSchema,
