@@ -48,10 +48,15 @@ const LeadsMap = ({ leads }: LeadsMapProps) => {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Google Maps Configuration Error</AlertTitle>
               <AlertDescription>
-                The Google Maps API key is missing. Please add your key to a 
-                 <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file.
+                 <p>The Google Maps API key is missing. Please add your key to a <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file.</p>
+                 <p className="mt-2">If the key is present, the <span className="font-semibold">AuthFailure</span> error means it's invalid or restricted. Please ensure:</p>
+                 <ul className="list-disc pl-5 mt-1">
+                    <li>The key is correct.</li>
+                    <li>The "Maps JavaScript API" is enabled.</li>
+                    <li>The domain/IP is authorized in the key's restrictions.</li>
+                 </ul>
                  <Link href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" className="block text-xs underline mt-2">
-                    Get your API Key from Google Cloud Console
+                    Manage your API Key in Google Cloud Console
                  </Link>
               </AlertDescription>
           </Alert>
