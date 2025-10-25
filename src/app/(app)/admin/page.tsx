@@ -68,6 +68,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoaderCircle, MoreHorizontal, Trash2, Edit, UploadCloud, PlusCircle } from 'lucide-react';
 import Image from "next/image";
+import { getIdToken } from 'firebase/auth';
 
 const allNavItems = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -190,10 +191,16 @@ const AdminPage = () => {
     }
     
     const handleDeleteUser = async () => {
-      if (!userToDelete || !user) return;
+      if (!userToDelete) return;
+      const { auth } = getFirebaseServices();
+      if (!auth?.currentUser) {
+          toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to delete users.' });
+          return;
+      }
 
       setIsDeleting(true);
       try {
+        await getIdToken(auth.currentUser); // This refreshes the token and ensures it's available for the function call
         const functions = getFunctions();
         const deleteUserFn = httpsCallable(functions, 'deleteUser');
         await deleteUserFn({ uid: userToDelete.uid });
