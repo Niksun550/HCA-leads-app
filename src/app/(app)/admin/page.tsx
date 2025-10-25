@@ -104,11 +104,6 @@ const AdminPage = () => {
     const [userPermissions, setUserPermissions] = useState<RolePermissions['navItems']>({});
     const [isSavingPermissions, setIsSavingPermissions] = useState(false);
     
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-    const [logoPreview, setLogoPreview] = useState<string | null>(null);
-    
     const [branches, setBranches] = useState<Branch[]>([]);
     const [newBranchName, setNewBranchName] = useState("");
     const [isAddingBranch, setIsAddingBranch] = useState(false);
@@ -269,58 +264,6 @@ const AdminPage = () => {
         }
     };
 
-    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setLogoFile(file);
-            setLogoPreview(URL.createObjectURL(file));
-        }
-    };
-
-    const handleUploadLogo = async () => {
-        if (!logoFile) {
-            toast({ variant: 'destructive', title: 'No file selected', description: 'Please choose a logo file to upload.' });
-            return;
-        }
-
-        setIsUploadingLogo(true);
-        setUploadProgress(0);
-        const { storage, db } = getFirebaseServices();
-        if (!storage || !db) return;
-
-        const logoPath = `branding/logo`;
-        const fileRef = storageRef(storage, logoPath);
-        const uploadTask = uploadBytesResumable(fileRef, logoFile);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed", error);
-                toast({ variant: "destructive", title: "Upload Failed", description: error.message });
-                setIsUploadingLogo(false);
-                setUploadProgress(null);
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                try {
-                    const settingsRef = doc(db, 'settings', 'branding');
-                    await setDoc(settingsRef, { logoUrl: downloadURL }, { merge: true });
-                    toast({ title: "Logo updated successfully!", description: "The new logo will be visible to all users on next refresh." });
-                } catch (error: any) {
-                     toast({ variant: "destructive", title: "Save Failed", description: "Could not save the new logo URL to the database." });
-                } finally {
-                    setIsUploadingLogo(false);
-                    setUploadProgress(null);
-                    setLogoFile(null);
-                    setLogoPreview(null);
-                }
-            }
-        );
-    };
-
     const handleAddBranch = async (branchName: string) => {
         if (!branchName.trim()) {
             toast({ variant: 'destructive', title: 'Branch name cannot be empty.' });
@@ -443,33 +386,6 @@ const AdminPage = () => {
                     </Card>
                 </div>
                 <div className="space-y-8">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Branding</CardTitle>
-                            <CardDescription>Customize the look of the application.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label htmlFor="logo-upload">Application Logo</Label>
-                                <Input id="logo-upload" type="file" accept="image/png, image/jpeg, image/svg+xml, image/webp" onChange={handleLogoFileChange} />
-                                <p className="text-xs text-muted-foreground mt-1">Recommended size: 128x128px</p>
-                            </div>
-
-                            {logoPreview && (
-                                <div className="p-4 border border-dashed rounded-md flex items-center justify-center">
-                                    <Image src={logoPreview} alt="Logo Preview" width={100} height={100} className="object-contain"/>
-                                </div>
-                            )}
-
-                            {uploadProgress !== null && <Progress value={uploadProgress} />}
-
-                            <Button onClick={handleUploadLogo} disabled={!logoFile || isUploadingLogo}>
-                                {isUploadingLogo ? <LoaderCircle className="mr-2 animate-spin" /> : <UploadCloud className="mr-2"/>}
-                                Upload Logo
-                            </Button>
-                        </CardContent>
-                    </Card>
-
                     <Card>
                         <CardHeader>
                             <CardTitle>Branch Management</CardTitle>

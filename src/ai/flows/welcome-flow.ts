@@ -28,7 +28,7 @@ const generateWelcomeMessageFlow = ai.defineFlow(
   },
   async ({ customerName }) => {
     
-    const prompt = `You are a customer success expert for a solar energy company called HCASolar.
+    const prompt = `You are a customer success expert for a solar energy company called SolarLeads.
     Your goal is to make a new customer feel welcomed and valued.
 
     Generate a friendly, professional, and concise welcome message to send to the new customer via SMS or a messaging app.
@@ -37,7 +37,7 @@ const generateWelcomeMessageFlow = ai.defineFlow(
     
     The message should:
     - Greet the customer by name.
-    - Thank them for choosing HCASolar.
+    - Thank them for choosing SolarLeads.
     - Briefly mention that a dedicated sales representative will be in touch shortly to discuss the next steps.
     - Be warm and reassuring.
     - Be under 200 characters.

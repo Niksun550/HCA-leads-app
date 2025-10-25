@@ -42,7 +42,7 @@ export function PwaInstaller() {
                 <ArrowDownToLine className="h-6 w-6" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">Install HCASolar App</p>
+              <p className="font-semibold text-foreground">Install SolarLeads App</p>
               <p className="text-sm text-muted-foreground">
                 {isIOS 
                   ? "Tap the Share icon, then 'Add to Home Screen'."

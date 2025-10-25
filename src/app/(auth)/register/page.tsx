@@ -122,7 +122,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader>
         <CardTitle className="text-3xl font-headline">Create an Account</CardTitle>
-        <CardDescription>Enter your details to get started with HCASolar CRM.</CardDescription>
+        <CardDescription>Enter your details to get started with SolarLeads CRM.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
